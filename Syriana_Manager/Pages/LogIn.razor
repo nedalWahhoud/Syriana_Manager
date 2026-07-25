@@ -1,0 +1,101 @@
+﻿@page "/login"
+@using Syriana_Manager.Components.LogIn
+@*LogIn*@
+<div class="logInContainer">
+    <div class="logInCard">
+        <h2>Welcome</h2>
+        <EditForm style="display:flex; flex-direction:column; gap:5px;" Model="@loginModel" OnValidSubmit="HandleLogin">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <div class="formGroup">
+                <label for="username">E-mail</label>
+                <InputText @onkeydown="KeyDown" id="username" class="form-control" @bind-Value="loginModel.Email" @onfocus="() => IsUsernameFocused = true" @onblur="() => IsUsernameFocused = false" />
+            </div>
+            <div class="formGroup">
+                <label for="password">Password</label>
+                <InputText @ref="passwordField" id="password" type="password" class="form-control" @bind-Value="loginModel.Password" />
+            </div>
+            <div class="RememberMe">
+                <InputCheckbox @bind-Value="loginModel.RememberMe" />
+                <span>An mich erinneren</span>
+            </div>
+            <div class="formGroup">
+                <button type="submit" class="btn btn-primary" disabled="@(isSingInLoading || isSingInLoading)">
+                    @if (isSingInLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    }
+                    else
+                    {
+                        <span>Login</span>
+                    }
+                </button>
+            </div>
+        </EditForm>
+       @* <button type="submit" @onclick="GoogleSingup" class="googleBtn" disabled="@(isGoogleLoading || isSingInLoading)">
+            @if (isGoogleLoading)
+            {
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            }
+            else
+            {
+                <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google Logo" />
+            }
+        </button>*@
+        <div class="signupLink">
+            <p>Don't have an account? <a href="#" @onclick="OnRegisterClicked1" >Sign up</a></p>
+        </div>
+    </div>
+</div>
+
+
+@code {
+
+    private LoginModel loginModel = new LoginModel();
+    // login
+    private async Task HandleLogin()
+    {
+        loginModel.SignupProvider = "Manual";
+        ValidationResult result = await authService.LoginAsync(loginModel);
+        if (result.Result)
+        {
+            navigationManager!.NavigateTo("/", true);
+        }
+        else
+            _ = js.InvokeVoidAsync("alert", result.Message);
+    }
+    // keydown
+    private bool IsUsernameFocused = false;
+    private InputText? passwordField;
+    private async Task KeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            if (IsUsernameFocused)
+            {
+                if (passwordField?.Element != null)
+                {
+                    await passwordField.Element.Value.FocusAsync();
+                }
+            }
+        }
+    }
+    // register
+    private void OnRegisterClicked1()
+    {
+        navigationManager!.NavigateTo("/register");
+    }
+    // google
+    private bool isSingInLoading = false;
+   /* private bool isGoogleLoading = false;
+    private void GoogleSingup()
+    {
+        isGoogleLoading = true;
+        string currenApiUrl = appConfig.Value.ApiBaseUrl;
+
+        NavigationManager.NavigateTo($"{appConfig.Value.GoogleApiUrl}?rememberMe={loginModel.RememberMe}", true);
+
+        isGoogleLoading = false;
+    }*/
+
+}

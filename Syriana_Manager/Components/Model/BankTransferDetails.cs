@@ -1,0 +1,11 @@
+﻿namespace Syriana_Manager.Components.Model
+{
+    public class BankTransferDetails
+    {
+        public int Id { get; set; }
+        public string AccountHolderName { get; set; } = string.Empty;
+        public string BankName { get; set; } = string.Empty;
+        public string IBAN { get; set; } = string.Empty;
+        public string BIC { get; set; } = string.Empty;
+    }
+}

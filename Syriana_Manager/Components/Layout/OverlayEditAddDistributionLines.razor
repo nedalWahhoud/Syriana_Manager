@@ -1,0 +1,105 @@
+﻿@inject IStringLocalizer<Syriana_Manager.Components.Layout.DistributionLinesPage> L
+<div class="overlay">
+	<div class="standardOverlayForm" @onclick:stopPropagation="true">
+		<EditForm Model="@DistributionLine" OnValidSubmit="Save">
+			<DataAnnotationsValidator />
+			<div class="overlayField">
+				<InputText class="form-control" @bind-Value="DistributionLine.LineName" placeholder="@L["NameLine"]" />
+				<ValidationMessage For="@(() => DistributionLine.LineName)" />
+			</div>
+			<div class="overlayField">
+				<InputText class="form-control" @bind-Value="DistributionLine.Description" placeholder="@L["Description"]" />
+				<ValidationMessage For="@(() => DistributionLine.Description)" />
+			</div>
+			<div class="mt-3">
+				<button class="btn btn-primary me-2" disabled="@IsProcessing">
+					@if (IsProcessing)
+					{
+						<span class="spinner-border spinner-border-sm"
+						role="status"
+						aria-hidden="true"></span>
+					}
+					else
+					{
+						<span>@L["Save"]</span>
+					}
+				</button>
+				<button class="btn btn-secondary" @onclick="Cancel">@L["Cancel"]</button>
+			</div>
+		</EditForm>
+	</div>
+</div>
+
+@code {
+	[Parameter]
+	public DistributionLines DistributionLine { get; set; } = new DistributionLines();
+	[Parameter]
+	public string action { get; set; } = string.Empty;
+	[Parameter]
+	public EventCallback<string> OnHandel { get; set; }
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			// scroll spreen
+			await js.InvokeVoidAsync("openFullscreen");
+		}
+	}
+	private bool IsProcessing = false;
+	private async Task Save()
+	{
+		IsProcessing = true;
+
+		TrimItems();
+
+		if (action == "Add")
+		{
+			var result = await distributionLinesService.AddDistributionLineAsync(DistributionLine);
+			if (result.Result)
+			{
+				DistributionLine = null!;
+				await OnHandel.InvokeAsync(action);
+			}
+			else
+				await js.InvokeVoidAsync("window.alert", result.Message);
+		}
+		else
+		{
+			DistributionLines? currentDistributionLine = distributionLinesService.DownloadedDistributionLines.FirstOrDefault(c => c.Id == DistributionLine.Id);
+			if (currentDistributionLine != null)
+			{
+				bool isEdited = distributionLinesService.IsEdited(currentDistributionLine, DistributionLine);
+				if (isEdited)
+				{
+					var result = await distributionLinesService.UpdateDistributionLineAsync(DistributionLine);
+					if (result.Result)
+					{
+						DistributionLine = new();
+						await OnHandel.InvokeAsync(action);
+					}
+					else
+						await js.InvokeVoidAsync("window.alert", result.Message);
+				}
+				else
+					await js.InvokeVoidAsync("window.alert", "Nichts hat sich geändert");
+			}
+			else
+				await js.InvokeVoidAsync("window.alert", "keine currentGroup gefunden");
+		}
+		IsProcessing = false;
+	}
+	private async void Cancel()
+	{
+		DistributionLine = new DistributionLines();
+		await OnHandel.InvokeAsync(action);
+	}
+
+	private void TrimItems()
+	{
+		if(DistributionLine != null)
+		{
+			DistributionLine.LineName = DistributionLine.LineName?.Trim()!;
+			DistributionLine.Description = DistributionLine.Description?.Trim()!;
+		}
+	}
+}

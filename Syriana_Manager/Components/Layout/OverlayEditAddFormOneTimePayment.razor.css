@@ -1,0 +1,71 @@
+﻿/* search */
+.UnexpectedPaymentDiv {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 15px;
+    flex-grow: 1;
+}
+
+.dropdownListsDiv {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    flex-grow: 1;
+}
+
+html[dir="rtl"] .searchBox {
+    direction: rtl;
+    text-align: right;
+}
+
+.searchBox {
+    position: relative;
+    width: 100%;
+    align-content: center;
+}
+    .searchBox input
+    {
+        width:100%;
+        margin:0;
+    }
+    .searchDropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ccc;
+        border-top: none;
+        max-height: 60px;
+        overflow-y: auto;
+        z-index: 1000;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .searchDropdown li {
+        display: flex;
+        align-items: center;
+        padding: 0.3rem 0;
+        cursor: pointer;
+    }
+
+        .searchDropdown li:hover {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+@media (max-width: 768px) {
+    .searchBox {
+        width: 100%;
+        max-width: none;
+    }
+
+    .searchDropdown li {
+        font-size: 0.8rem;
+    }
+
+        .searchDropdown li img {
+            width: 40px;
+            height: 40px;
+        }
+}

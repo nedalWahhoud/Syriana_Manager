@@ -1,0 +1,578 @@
+﻿@page "/order"
+@using Syriana_Manager.Components.Model
+@namespace Syriana_Manager.Components.Layout
+@inject IStringLocalizer<Syriana_Manager.Components.Layout.Orders> L
+<div class="mainDiv">
+    <AuthorizeView>
+        <Authorized Context="authContext">
+            @if (!IsRendered.Initialized || !IsRendered.ParametersSet || !IsRendered.AfterRender)
+            {
+                <Syriana_Manager.Components.Layout.Loading />
+            }
+            else
+            {
+                @if (IsHasManageOrdersPermission)
+                {
+                    @* table *@
+                    <div class="tableContiner">
+                        @* top table *@
+                        <div class="topTable">
+                            <div class="dropdownDiv">
+                                <!-- Dropdown Status -->
+                                <select class="statusDropdown" @onchange="OnStatusChanged">
+                                    <option value="0">@L["Status"]</option>
+                                    @foreach (var status in orderService.OrderStatusList)
+                                    {
+                                        <option value="@status.Id">@(IsArabic ? status.Status_ar : status.Status_de)</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th style="min-width:70px; max-width: 70px; word-break: break-word; white-space: normal;">@L["OrderNumber"]</th>
+                                    <th style="min-width:50px; max-width: 50px; word-break: break-word; white-space: normal;">@L["User"]</th>
+                                    <th style="min-width:50px; max-width: 50px; word-break: break-word; white-space: normal;">@L["Date"]</th>
+                                    <th style="min-width:100px; max-width: 50px; word-break: break-word; white-space: normal;">@L["TotalPrice"]</th>
+                                    <th style="min-width:50px; max-width: 50px; word-break: break-word; white-space: normal;">@L["Status"]</th>
+                                    <th style="min-width:40px;">⋮</th>
+
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @* Loading message *@
+                                @if (IsOrdersLoading)
+                                {
+                                    <tr>
+                                        <td colspan="12" class="loadingMessage">
+                                            Lädt...
+                                        </td>
+                                    </tr>
+                                }
+                                @for (int i = 0; i < orders.Count; i++)
+                                {
+                                    var order = orders[i];
+                                    <tr>
+                                        <td>@order.Id</td>
+                                        <td>@(order.User?.UserName ?? "Kein Unsername")</td>
+                                        <td>@order.OrderDate.ToString("d", GermanCulture)</td>
+                                        <td>@order.TotalPrice.ToString("C", GermanCulture)</td>
+                                        <td>
+                                            <InputSelect Value="@order.StatusId"
+                                            ValueChanged="@((int val) => OnStatusChangedItem(order, val.ToString()))"
+                                            ValueExpression="() => order.StatusId"
+                                            class="form-select"
+                                            disabled="@order.IsUpdatingStatus">
+                                                @foreach (var status in orderService.OrderStatusList)
+                                                {
+                                                    <option value="@status.Id">@(IsArabic ? status.Status_ar : status.Status_de)</option>
+                                                }
+                                            </InputSelect>
+
+                                            @if (order.IsUpdatingStatus)
+                                            {
+                                                <div class="spinner-border spinner-border-sm text-primary ms-2" role="status">
+                                                    <span class="visually-hidden">Laden...</span>
+                                                </div>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="dropdown">
+                                                <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                    ⋮
+                                                </button>
+                                                <ul class="dropdown-menu">
+                                                    <li style="cursor:pointer"><a class="dropdown-item" @onclick="() => OnOrderDetails(order)">@L["OrderDetails"]</a></li>
+                                                    <li style="cursor:pointer"><a class="dropdown-item" @onclick="() => OnInvoice(order)">@L["CreateInvoice"]</a></li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="8">
+                                            <table class="table tableSm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>@L["Img"]</th>
+                                                        <th>@L["Product"]</th>
+                                                        <th>@L["Quantity"]</th>
+                                                        <th>@L["UnitPrice"]</th>
+                                                        <th>@L["TotalPrice"]</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var item in order.OrderItems)
+                                                    {
+                                                        <tr>
+                                                            <td>
+                                                                <img src="@productImagesService.GetProductImageUrl(item.Product?.ProductImages.FirstOrDefault(img => img.IsMain)!)" class="productImg" />
+                                                            </td>
+                                                            <td>@(IsArabic ? item.Product?.Name_ar : item.Product?.Name_de ?? "Fehler bei Product name_de")</td>
+                                                            <td>@item.Quantity</td>
+                                                            <td>@item.UnitPrice.ToString("C", GermanCulture)</td>
+                                                            <td>@((item.UnitPrice * item.Quantity).ToString("C", GermanCulture))</td>
+
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                }
+                                @* No orders found *@
+                                @if (orders.Count == 0 && !IsOrdersLoading)
+                                {
+                                    <tr>
+                                        <td colspan="12" class="loadingMessage">
+                                            @L["NoOrdersFound."]
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        @* Mehr laden *@
+                        @if (orders.Count > 0)
+                        {
+                            <button type="submit" class="btn btn-primary moreBtn" @onclick="() => OnMoreLoad()" disabled="@(IsOrdersLoading || AllItemsLoaded)">
+                                @if (IsOrdersLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                    <span class="ms-2">Lädt...</span>
+                                }
+                                else if (!AllItemsLoaded)
+                                {
+                                    <span>@L["MoreLoad"]</span>
+                                }
+                                @if (AllItemsLoaded)
+                                {
+                                    <span>@L["AllLoaded"]</span>
+                                }
+                            </button>
+                        }
+                        @* show Overlay *@
+                        @if (IsOverlayVisible && overlayItems != null)
+                        {
+                            <div class="overlay">
+                                <div class="overlayForm">
+                                    <button class="btn-close" @onclick="CloseOverlay"></button>
+                                    @if (string.IsNullOrEmpty(overlayItems.NoData))
+                                    {
+                                        @((MarkupString)overlayItems.Title)
+
+                                        @foreach (var item in overlayItems.Items)
+                                        {
+                                            if (item.Item2 == OverlayType.AddSN)
+                                            {
+                                                var orderIdStr = item.Item1;
+                                                int orderId = int.Parse(orderIdStr);
+                                                <button class="btn btn-success" @onclick=" () => OnAddOrUpdateTrackingNumberShowOverlay(orderId)">@L["AddTrackingNr"]</button>
+                                            }
+                                            else if (item.Item2 == OverlayType.UpdateSN)
+                                            {
+                                                var orderIdStr = item.Item1;
+                                                int orderId = int.Parse(orderIdStr);
+                                                string trackingNumber = orders.FirstOrDefault(o => o.Id == orderId)?.TrackingNumber ?? "Fehler bei Trackingnummer";
+                                                <span style="cursor:pointer;" @ondblclick=" ()=> OnAddOrUpdateTrackingNumberShowOverlay(orderId)">@trackingNumber</span>
+                                            }
+                                            else
+                                            {
+                                                @((MarkupString)item.Item1)
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        @((MarkupString)overlayItems.NoData)
+                                    }
+                                </div>
+                            </div>
+                        }
+                        @* show Add Tracking Number *@
+                        @if (IsAddTrackingNumberVisible)
+                        {
+                            <div class="overlay">
+                                <div class="overlayForm">
+                                    <EditForm Model="orderAddTrackingNumber" OnValidSubmit="OnAddOrUpdateTrackingNumber">
+                                        <DataAnnotationsValidator />
+                                        <div class="formGroupAdd">
+                                            <InputText class="form-control" @bind-value="orderAddTrackingNumber.TrackingNumber" placeholder="Trackingnummer" />
+                                            <ValidationMessage For="@(() => orderAddTrackingNumber.TrackingNumber)" />
+                                        </div>
+                                        <div class="d-flex flex-row gap-1">
+                                            <button type="submit" class="btn btn-primary mt-2" disabled="@IsAddTrackingNumberLoading">
+                                                @if (IsAddTrackingNumberLoading)
+                                                {
+                                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                                    <span class="ms-2">Ladt...</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>@L["Add"]</span>
+                                                }
+                                            </button>
+                                            <button type="button" class="btn btn-secondary mt-2" @onclick="OnAddTrackingNumberClose">@L["Cancel"]</button>
+                                        </div>
+                                    </EditForm>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    @* Rechnung *@
+                    @if (IsInvoiceVisible)
+                    {
+                        <Syriana_Manager.Components.Layout.InvoiceLayout invoice="invoice" OnHandel="HandleInvoiceClose" />
+                    }
+                }
+                else
+                {
+                    <div style="display:flex; justify-content:center; align-items:center; height:80vh;">
+                        <div class="alert alert-danger text-center">
+                            @L["NoPermission"]
+                        </div>
+                    </div>
+                }
+            }
+        </Authorized>
+        <NotAuthorized>
+            <Syriana_Manager.Pages.LogIn />
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
+@code {
+    private List<Order> orders = new List<Order>();
+    private bool IsHasManageOrdersPermission = false;
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await authProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        IsHasManageOrdersPermission = user.HasClaim("permission", "manageOrders") ||
+                                user.HasClaim("permission", "fullAccess");
+        if (IsHasManageOrdersPermission)
+        {
+            // get BankTransferDetails
+            _ = invoiceService.GetBankTransferDetailsAsync();
+
+            // get orderstatus list
+            await orderService.GetOrderStatusListAsync();
+            // get first orders
+            await OnMoreLoad();
+        }
+
+        // afterRender und ParameterSet true, weil wir nutzen die funktionen hier nicht
+        IsRendered.AfterRender = IsRendered.ParametersSet = true;
+        IsRendered.Initialized = true;
+    }
+    // more load
+    private bool AllItemsLoaded { get; set; } = false;
+    private bool IsOrdersLoading { get; set; } = false;
+    private string statusId = "0";
+    private List<int> excludeOrderIds = new List<int>();
+    private async Task OnMoreLoad()
+    {
+        if (IsOrdersLoading) return;
+
+        IsOrdersLoading = true;
+        // load from downloaded local list 
+        LoadLocal();
+        // load from server
+        await LoandFromServer();
+        // sort orders by OrderDate descending
+        orders = orders.OrderByDescending(o => o.OrderDate).ToList();
+
+        IsOrdersLoading = false;
+        StateHasChanged();
+    }
+    private void LoadLocal()
+    {
+        // get orders by status local
+        var orderLocal = orderService.GetOrdersByStatusLocal(statusId, excludeOrderIds);
+        // add the ids of the loaded orders to the exclude list
+        excludeOrderIds.AddRange(orderService.getIdsFromOrdersLocal(orderLocal));
+        // add local orders to the main list
+        orders.AddRange(orderLocal);
+    }
+    private async Task LoandFromServer()
+    {
+        var result = await orderService.GetAllOrdersbyStatusAsync(statusId, excludeOrderIds);
+        if (result.Result)
+        {
+            // get downloaded orders
+            var ordersDownloaded = orderService.GetOrdersByStatusLocal(statusId, excludeOrderIds);
+            // add the ids of the downloaded orders to the exclude list
+            excludeOrderIds.AddRange(orderService.getIdsFromOrdersLocal(ordersDownloaded));
+            // add dowloaded orders to the main list
+            orders.AddRange(ordersDownloaded);
+
+            if (result.Message == "AllItemsLoaded")
+                AllItemsLoaded = true;
+        }
+        else
+            _ = js.InvokeVoidAsync($"Fehler beim Laden der Bestellungen: {result.Message}");
+    }
+    // change status table
+    private async Task OnStatusChangedItem(Order order, string value)
+    {
+        if (order == null || string.IsNullOrEmpty(value)) return;
+
+        order.IsUpdatingStatus = true;
+
+        if (int.TryParse(value, out int statusId))
+        {
+            // wenn wird die status jeweilig Sendung muss erstmal die Verfolgungsnummer eingeben wenn nicht schon eingegeben wurde
+            if (statusId >= 4 && statusId <= 6)
+            {
+                if (order.PaymentMethod?.Id == 5 && order.ShippingProviders != null && order.TrackingNumber == null)
+                {
+                    OnAddOrUpdateTrackingNumberShowOverlay(order.Id);
+                }
+                else
+                    await UpdateStatusInDatabase(order, statusId);
+            }
+            else
+            {
+                await UpdateStatusInDatabase(order, statusId);
+            }
+        }
+        else
+            _ = js.InvokeVoidAsync("Fehler bei Statusänderung: Ungültige Status-ID");
+
+        order.IsUpdatingStatus = false;
+        StateHasChanged();
+    }
+    private async Task UpdateStatusInDatabase(Order order,int statusId)
+    {
+        var result = await orderService.UpdateStatusOrder(order.Id, statusId);
+        if (result.Result)
+        {
+            _ = js.InvokeVoidAsync("window.alert", "Status erfolgreich geändert");
+
+            // update exist order status
+            order.StatusId = statusId;
+            // update openOrder count if status is about Open
+            await orderService.RefreshCountOpenOrders(false);
+            StateHasChanged();
+
+            return;
+        }
+        else
+            await js.InvokeVoidAsync("window.alert", $"Fehler bei Statusänderung: {result.Message}");
+    }
+    // Overlay click table
+    private bool IsOverlayVisible { get; set; } = false;
+    private OverlayItems overlayItems  = null!;
+    private void OnOrderDetails(Order order)
+    {
+        if (order == null) return;
+
+        overlayItems = new OverlayItems
+			{
+				Items = new List<(string,OverlayType)>()
+			};
+        overlayItems.Title = $"<h1>{L["OrderDetails"]}</h1>";
+        overlayItems.Items.Add(($"<p>{L["OrderNumber"]}: {order.Id}</p>", OverlayType.None));
+        // user
+        if (order.User != null)
+        {
+            overlayItems.Items.Add(($"<h3>{L["User"]}</h3>", OverlayType.None));
+            overlayItems.Items.Add(($"<p>{L["UserId"]}: {order.User.Id.ToString() ?? "null"}</p>", OverlayType.None));
+            overlayItems.Items.Add(($"<p>{L["Name"]}: {order.User.UserName ?? "null"}</p>", OverlayType.None));
+            if (!string.IsNullOrEmpty(order.User.Email))
+                overlayItems.Items.Add(($"<p>{L["Email"]}: {order.User?.Email ?? "null"}</p>", OverlayType.None));
+        }
+        // payment method
+        if (order.PaymentMethod != null)
+        {
+            overlayItems.Items.Add(($"<h3>{L["PaymentMethod"]}</h3>", OverlayType.None));
+            overlayItems.Items.Add(($"<p>{order.PaymentMethod.Description_de}</p>",OverlayType.None));
+        }
+        // address
+        if (order.Address != null)
+        {
+            overlayItems.Items.Add(($"<h3>{L["Address"]}</h3>", OverlayType.None));
+            overlayItems.Items.Add(($"<p>{L["FirstName"] + "/" + L["LastName"]}: {order.Address.FirstName} {order.Address.LastName}</p>", OverlayType.None));
+            overlayItems.Items.Add(($"<p>{L["Street"]}: {order.Address.Street}</p>", OverlayType.None));
+            overlayItems.Items.Add(($"<p>{L["PostalCode"]}: {order.Address.ZipCode} {order.Address.City}-{order.Address.Country}</p>", OverlayType.None));
+            overlayItems.Items.Add(($"<p>{L["PhoneNumber"]}:{order.Address.Phone}</p>", OverlayType.None));
+        }
+        // shipping
+        if (order.ShippingProviders != null)
+        {
+            overlayItems.Items.Add(($"<h3>{L["ShippingMethod"]}</h3>", OverlayType.None));
+            overlayItems.Items.Add(($"<p>{order.ShippingProviders.Name_de}</p>", OverlayType.None));
+            @if (order.PaymentMethod?.Id == 5 && order.ShippingProviders != null && string.IsNullOrEmpty(order.TrackingNumber))
+            {
+                overlayItems.Items.Add(($"{order.Id}", OverlayType.AddSN));
+            }
+            else if (order.PaymentMethod?.Id == 5 && order.ShippingProviders != null && !string.IsNullOrEmpty(order.TrackingNumber))
+            {
+                overlayItems.Items.Add(($"{order.Id}", OverlayType.UpdateSN));
+            }
+            else
+            {
+                overlayItems.Items.Add(($"<p>{L["NotPossible"]}</p>", OverlayType.None));
+            }
+
+            if (order.ShippingProviders != null && order.ShippingProviders.PublicShippingCost > 0)
+            {
+                overlayItems.Items.Add(($"<p>{L["PublicShippingCosts"]}: {order.ShippingProviders.PublicShippingCost.ToString("C", GermanCulture)}</p>", OverlayType.None));
+            }
+        }
+
+        // Discount 
+        @if (order.DiscountCode != null)
+        {
+            overlayItems.Items.Add(($"<h3>{L["DiscountCode"]}</h3>", OverlayType.None));
+            var discountDetails = invoiceService.GetDetailsDiscountCode(order);
+            var symbol = order.DiscountCode.DiscountType == DiscountType.Percentage ? "%" : "€";
+            overlayItems.Items.Add(($"<p>{L["Code"]}: {discountDetails.Code} </p>", OverlayType.None));
+            overlayItems.Items.Add(($"<p>{L["DiscountValue"]}: {discountDetails.DiscountPercentage}{symbol} ({discountDetails.DiscountValue.ToString("C", GermanCulture)})</p>", OverlayType.None));
+        }
+        else if (order.DiscountCategory != null)
+        {
+            overlayItems.Items.Add(($"<h3>{L["RabattCategoryCode"]}</h3>", OverlayType.None));
+            var discountDetails = invoiceService.GetDetailsDiscountCategory(order);
+            var symbol = order.DiscountCategory.DiscountType == DiscountType.Percentage ? "%" : "€";
+            overlayItems.Items.Add(($"<p>{L["Code"]}: {discountDetails.Code} </p>", OverlayType.None));
+            overlayItems.Items.Add(($"<p>{L["Category"]}: {discountDetails.categoryName} </p>", OverlayType.None));
+            overlayItems.Items.Add(($"<p>{L["DiscountValue"]}: {discountDetails.DiscountPercentage}{symbol} ({discountDetails.DiscountValue.ToString("C", GermanCulture)})</p>", OverlayType.None));
+        }
+      
+
+        // notes
+        if(!string.IsNullOrEmpty(order.Notes))
+        {
+            overlayItems.Items.Add(($"<h3>{L["Note"]}</h3>", OverlayType.None));
+            overlayItems.Items.Add(($"<p>{order.Notes}</p>", OverlayType.None));
+        }
+
+        IsOverlayVisible = true;
+    }
+    private void CloseOverlay()
+    {
+        IsOverlayVisible = false;
+        overlayItems = null!;
+    }
+    private string GetFullAddress(Address address)
+    {
+        if (address == null) return $"{L["NoAddress"]}";
+        return $"{address.FirstName} {address.LastName}, {address.Street}, {address.ZipCode} {address.City}, {address.Country}, 📞 {address.Phone}";
+    }
+    // search 
+    public async void OnStatusChanged(ChangeEventArgs e)
+    {
+        string statusId = e.Value?.ToString() ?? string.Empty;
+        if (string.IsNullOrEmpty(statusId))
+            return;
+
+        // clear orders list to new statusId and excludeOrderIds list
+        orders.Clear();
+        excludeOrderIds.Clear();
+        // reset AllItemsLoaded
+        AllItemsLoaded = false;
+        orderService.Rest();
+
+        // get orders by new statusId
+        this.statusId = statusId;
+        await OnMoreLoad();
+    }
+    // Sendungsnummer
+    private bool IsAddTrackingNumberVisible = false;
+    private Order orderAddTrackingNumber = null!;
+    public void OnAddOrUpdateTrackingNumberShowOverlay(int orderId)
+    {
+		// close details overlay if open and reset invoice overlay if open
+        IsOverlayVisible = false;
+        overlayItems = null!;
+        IsInvoiceVisible = false;
+
+        Order? order = orders.FirstOrDefault(o => o.Id == orderId);
+        // check if order is not null
+        if (orderId <= 0 || order == null)
+        {
+            _ = js.InvokeVoidAsync("Keine Bestellung ausgewählt.");
+            return;
+        }
+        // Vorbereitung die orderAddTrackingNumber von anfang damit die änderung bei orderAddTrackingNumber nicht an ursprüngliche order geändert wird
+        orderAddTrackingNumber = new Order
+			{
+				Id = orderId,
+				TrackingNumber = order.TrackingNumber ?? string.Empty // set existing tracking number or empty
+			};
+        IsAddTrackingNumberVisible = true;
+    }
+    private bool IsAddTrackingNumberLoading = false;
+    private async Task OnAddOrUpdateTrackingNumber()
+    {
+        if (IsAddTrackingNumberLoading) return;
+        IsAddTrackingNumberLoading = true;
+
+        if (string.IsNullOrEmpty(orderAddTrackingNumber.TrackingNumber))
+        {
+            _ = js.InvokeVoidAsync("Bitte geben Sie eine Trackingnummer ein.");
+            return;
+        }
+        var result = await orderService.AddOrUpdateTrackingNumber(orderAddTrackingNumber.Id, orderAddTrackingNumber.TrackingNumber);
+        if (result.Result)
+        {
+            _ = js.InvokeVoidAsync(result.Message!);
+            // update die trackingnummer in ursprüngliche order
+            var orderToUpdate = orders.FirstOrDefault(o => o.Id == orderAddTrackingNumber.Id);
+            if (orderToUpdate != null)
+            {
+                orderToUpdate.TrackingNumber = orderAddTrackingNumber.TrackingNumber;
+            }
+
+            // reset tracking number and visibility
+            orderAddTrackingNumber = null!;
+            IsAddTrackingNumberVisible = false;
+        }
+        else
+        {
+            orderAddTrackingNumber.TrackingNumber = null!;
+            _ = js.InvokeVoidAsync($"Fehler beim Hinzufügen der Sendungsnummer: {result.Message}");
+        }
+
+        IsAddTrackingNumberLoading = false;
+    }
+    public void OnAddTrackingNumberClose()
+    {
+        // reset tracking number and visibility
+        orderAddTrackingNumber = null!;
+        IsAddTrackingNumberVisible = false;
+    }
+    // Rechnung
+    private bool IsInvoiceVisible = false;
+    private Invoice invoice = null!;
+    private async void OnInvoice(Order order)
+    {
+        IsInvoiceVisible = true;
+
+        // get bacnk transfer details if not already loaded
+        var result = await invoiceService.GetBankTransferDetailsAsync();
+        if (result.Result == true)
+        {
+            invoice = new Invoice
+                {
+                    InvoceeNumber = order.OrderDate.Year.ToString() +
+                                        order.OrderDate.Month.ToString("D2") +
+                                        order.OrderDate.Day.ToString("D2") +
+                                        order.Id.ToString("D6"),
+                    CurrentOrder = order,
+
+                };
+        }
+        else
+        {
+            _ = js.InvokeVoidAsync($"{result.Message}");
+            IsInvoiceVisible = false;
+            return;
+        }
+    }
+	private async Task HandleInvoiceClose()
+	{
+		IsInvoiceVisible = false;
+		invoice = null!;
+		await InvokeAsync(StateHasChanged);
+	}
+}

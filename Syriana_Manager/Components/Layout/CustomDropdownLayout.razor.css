@@ -1,0 +1,33 @@
+﻿/* menu */
+.customDropdown {
+    margin-top: 5px;
+}
+
+    .customDropdown li {
+        list-style: none;
+        cursor: pointer;
+    }
+
+        .customDropdown li a {
+            display: block;
+            padding: 8px 12px;
+            text-decoration: none; 
+            color: inherit; 
+        }
+
+            .customDropdown li a:hover {
+                background-color: #007bff;
+                color: white;
+            }
+/* dropdown */
+.disabledItem {
+    pointer-events: none;
+    opacity: 0.5;
+    cursor: not-allowed;
+    text-decoration: none;
+    color: gray;
+}
+
+.dropdown-menu {
+    margin-top: 5px;
+}

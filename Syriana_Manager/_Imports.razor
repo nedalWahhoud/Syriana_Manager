@@ -1,0 +1,55 @@
+﻿@using System.Net.Http
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+@using Microsoft.AspNetCore.Components.Authorization;
+@using Microsoft.AspNetCore.Components.WebAssembly.Http
+@using Microsoft.JSInterop
+@using Syriana_Manager
+@**@
+@using Syriana_Manager.Components.ProductsF;
+@using Syriana_Manager.Components.CategoriesF;
+@using Syriana_Manager.Components.DiscountF;
+@using Syriana_Manager.Components.CartF;
+@using Syriana_Manager.Components.LogIn;
+@using Syriana_Manager.Components.OrderF
+@using Syriana_Manager.Components.InvoiceF
+@using Syriana_Manager.Components.SupplierF
+@using Syriana_Manager.Components.LocalStorageF
+@using Syriana_Manager.Components.TaxRatesF
+@using Syriana_Manager.Components.ProductGroupF
+@using Syriana_Manager.Components.ImagesF
+@using Syriana_Manager.Components.DistributionLinesF
+@using Syriana_Manager.Components.CustomersF
+@using Syriana_Manager.Components.Share
+@using Syriana_Manager.Components.DebtF
+@using Syriana_Manager.Components.TransactionsCustomersF
+@using Syriana_Manager.Components.OneTimePaymentsF
+
+@**@
+@inject IJSRuntime js
+@inject ProductService productService
+@inject ProductGroupService productGroupService
+@inject CategoryService categoryService
+@inject DiscountService discountService
+@inject CartService cartService
+@inject AuthService authService
+@inject AuthenticationStateProvider authProvider
+@inject OrderService orderService
+@inject InvoiceService invoiceService
+@inject SuppliersService suppliersService
+@inject TaxRatesService taxRateService
+@inject ProductImagesService productImagesService
+@inject CustomersService customersService
+@inject DistributionLinesService distributionLinesService
+@inject WhatsAppService whatsAppService
+@inject DebtService debtService
+@inject TransactionsCustomersService transactionsCustomersService
+@inject OneTimePaymentsService oneTimePaymentsService
+@inject CarouselImageService carouselImageService
+
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@inject LocalStorageService localStorageService
+@inject NavigationManager navigationManager
+@inherits Syriana_Manager.Components.ProjectComponentBase

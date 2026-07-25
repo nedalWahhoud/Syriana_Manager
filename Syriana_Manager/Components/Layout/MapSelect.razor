@@ -1,0 +1,22 @@
+﻿<div id="customMapModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 99999; justify-content: center; align-items: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; direction: rtl;">
+
+    <div style="background-color: #ffffff; width: 90%; max-width: 340px; padding: 24px; border-radius: 16px; text-align: center; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3); animation: modalFadeIn 0.3s ease-out;">
+
+        <h3 style="margin-top: 0; margin-bottom: 8px; font-size: 18px; color: #1a1a1a; font-weight: 600;">Öffnen mit</h3>
+        <p style="margin-top: 0; margin-bottom: 24px; font-size: 14px; color: #666;">Wählen Sie Ihre bevorzugte Karten-App, um den Standort anzuzeigen:</p>
+
+        <button id="googleMapsBtn" style="display: flex; align-items: center; justify-content: center; width: 100%; padding: 14px; margin-bottom: 20px; border: none; border-radius: 12px; background-color: #3DDC84; color: #ffffff; font-size: 16px; font-weight: 500; cursor: pointer; transition: background 0.2s;">
+            <i class="bi bi-android2" style="margin-left: 8px; font-size: 20px;"></i>  Google Maps
+        </button>
+
+        <button id="appleMapsBtn" style="display: flex; align-items: center; justify-content: center; width: 100%; padding: 14px; margin-bottom: 12px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #007AFF; color: #ffffff; font-size: 16px; font-weight: 500; cursor: pointer; transition: background 0.2s;">
+            <i class="bi bi-apple" style="margin-left: 8px; font-size: 20px;"></i> Apple Maps
+        </button>
+
+        <button onclick="window.mapRedirect.closeModal()" style="background: none; border: none; color: #007AFF; font-size: 15px; font-weight: 600; cursor: pointer; padding: 5px 10px;">
+            Abbrechen
+        </button>
+
+    </div>
+</div>
+

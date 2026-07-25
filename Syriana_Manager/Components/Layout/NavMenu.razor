@@ -1,0 +1,196 @@
+﻿@inherits Syriana_Manager.Components.ProjectComponentBase
+@inject IStringLocalizer<Syriana_Manager.Components.Layout.NavMenu> L
+<AuthorizeView>
+    <Authorized Context="authContext">
+        <div class="top-row navbar navbar-dark">
+            <div class="container-fluid">
+                <NavLink href="/" class="logo-link"> <img src="/Images/logo/LogoMitText.png" alt="logo" class="logoImg" /></NavLink>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+<div class="nav-scrollable">
+    <nav class="flex-column">
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link d-flex align-items-center" style="height: 50px;" href="/" Match="NavLinkMatch.All" @onclick="CloseMenu">
+                        <span class="position-relative me-2 d-inline-block" style="line-height: 1;">
+                            <span class="bi bi-box-seam fs-3"></span>
+                        </span>
+                        <span class="ms-2">@L["Products"]</span>
+                    </NavLink>
+                    <NavLink href="/order" class="nav-link d-flex align-items-center" style="height: 50px;" @onclick="CloseMenu">
+                        <span class="position-relative me-2 d-inline-block" style="line-height: 1;">
+                            <span class="bi bi-bag-check fs-3"></span>
+                            @* noch nicht fertige Bestellungen (Gelb) *@
+                            @if (orderService.NotFinishedOrderCount > 0)
+                            {
+                                <span class="position-absolute top-0 start-0 translate-middle badge rounded-pill bg-danger">
+                                    @orderService.NotFinishedOrderCount
+                                </span>
+                            }
+                        </span>
+                        <span class="ms-2">@L["Orders"]</span>
+                    </NavLink>
+                    <NavLink href="/customers" class="nav-link d-flex align-items-center" style="height: 50px;" @onclick="CloseMenu">
+                        <span class="position-relative me-2 d-inline-block" style="line-height: 1;">
+                            <i class="bi bi-people fs-3"></i>
+                        </span>
+                        <span class="ms-2">@L["Customers"]</span>
+                    </NavLink>
+                     <NavLink href="/distributionlines" class="nav-link d-flex align-items-center" style="height: 50px;" @onclick="CloseMenu">
+                        <span class="position-relative me-2 d-inline-block" style="line-height: 1;">
+                            <i class="bi bi-buildings fs-3"></i>
+                        </span>
+                        <span class="ms-2">@L["DistributionLines"]</span>
+                    </NavLink>
+                    <NavLink href="/oneTimePayments" class="nav-link d-flex align-items-center" style="height: 50px;" @onclick="CloseMenu">
+                        <span class="position-relative me-2 d-inline-block" style="line-height: 1;">
+                            <i class="bi bi-cash-coin fs-3"></i>
+                        </span>
+                        <span class="ms-2">@L["OnePayment"]</span>
+                    </NavLink>
+                    <NavLink href="/discountcode" class="nav-link d-flex align-items-center" style="height: 50px;" @onclick="CloseMenu">
+                        <span class="position-relative me-2 d-inline-block" style="line-height: 1;">
+                            <i class="bi bi-tag fs-3 "></i>
+                        </span>
+                        <span class="ms-2">@L["Discounts"]</span>
+                    </NavLink>
+                    <NavLink href="/suppliers" class="nav-link d-flex align-items-center" style="height: 50px;" @onclick="CloseMenu">
+                        <span class="position-relative me-2 d-inline-block" style="line-height: 1;">
+                            <i class="bi bi-truck fs-3"></i>
+                        </span>
+                        <span class="ms-2">@L["Suppliers"]</span>
+                    </NavLink>
+                    <NavLink href="/pGroupCat" class="nav-link d-flex align-items-center" style="height: 50px;" @onclick="CloseMenu">
+                        <span class="position-relative me-2 d-inline-block" style="line-height: 1;">
+                            <i class="bi bi-stack fs-3"></i>
+                        </span>
+                        <span class="ms-2">@L["GroupCat."]</span>
+                    </NavLink>
+                      <NavLink href="/carousel" class="nav-link d-flex align-items-center" style="height: 50px;" @onclick="CloseMenu">
+                        <span class="position-relative me-2 d-inline-block" style="line-height: 1;">
+                            <i class="bi bi-display fs-3"></i>
+                        </span>
+                        <span class="ms-2">@L["ImageCarousel"]</span>
+                    </NavLink>
+                     <NavLink href="/users" class="nav-link d-flex align-items-center" style="height: 50px;" @onclick="CloseMenu">
+                        <span class="position-relative me-2 d-inline-block" style="line-height: 1;">
+                            <i class="bi bi-person-circle fs-3"></i>
+                        </span>
+                        <span class="ms-2">@L["Users"]</span>
+                    </NavLink>
+
+                    <div class="nav-item px-3 mt-3 pt-2 border-top border-secondary-subtle">
+                        <div class="dropdown @(isDropdownOpen ? "show" : "")">
+                            <button class="btn btn-outline-light d-flex align-items-center justify-content-between w-100 px-3"
+                                    style="height: 50px; border-color: rgba(255,255,255,0.1); background: transparent;"
+                                    type="button"
+                                    @onclick="ToggleDropdown">
+                                <div class="d-flex align-items-center gap-3">
+                                    <i class="bi bi-globe fs-4 text-secondary"></i>
+                                    <span class="text-white-50 small">
+                                        @(IsArabic ? "العربية" : "Deutsch")
+                                    </span>
+                                </div>
+
+                                <span class="@(IsArabic ? "fi fi-sy" : "fi fi-de")"
+                                      style="border-radius: 3px; width: 24px; height: 16px; display: inline-block;">
+                                </span>
+                            </button>
+
+                            <ul class="dropdown-menu dropdown-menu-dark w-100 shadow @(isDropdownOpen ? "show" : "")"
+                                style="background-color: #1e1e1e; border: 1px solid #333; position: absolute; z-index: 1050;">
+                                <li>
+                                    <button class="dropdown-item d-flex align-items-center justify-content-between py-2" @onclick="@(() => ChangeLanguage("de"))">
+                                        <span class="d-flex align-items-center gap-2">
+                                            <span class="fi fi-de"></span> Deutsch
+                                        </span>
+                                        @if (!IsArabic)
+                                        {
+                                            <i class="bi bi-check2 text-success"></i>
+                                        }
+                                    </button>
+                                </li>
+                                <li>
+                                    <button class="dropdown-item d-flex align-items-center justify-content-between py-2 text-end" @onclick="@(() => ChangeLanguage("ar"))" dir="rtl">
+                                        <span class="d-flex align-items-center gap-2">
+                                            <span class="fi fi-sy"></span> العربية
+                                        </span>
+                                        @if (IsArabic)
+                                        {
+                                            <i class="bi bi-check2 text-success"></i>
+                                        }
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                   
+                </div>
+                <!-- Spacer to push logout to bottom -->
+                <div style="flex-grow: 1;"></div>
+
+                <!-- LogOut at bottom -->
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link d-flex align-items-center" @onclick="HandleLogout">
+                        <span class="bi bi-box-arrow-left fs-3 me-2 d-inline-block" style="line-height: 1;"></span>
+                        <span class="ms-2">@L["Logout"]</span>
+                    </NavLink>
+                </div>
+
+            </Authorized>
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="/login">
+                        <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span> @L["LogIn"]
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
+    </nav>
+</div>
+
+@code {
+
+
+    private bool isDropdownOpen = false;
+
+    private void ToggleDropdown()
+    {
+        isDropdownOpen = !isDropdownOpen;
+    }
+    private async Task ChangeLanguage(string culture)
+    {
+        isDropdownOpen = false;
+        try
+        {
+            if (!string.IsNullOrEmpty(culture))
+            {
+                // set culture in cookie
+                await js.InvokeVoidAsync("blazorCulture.set", culture);
+
+                // setze session storage item um zu verhindern, dass die culture mehrmals gesetzt wird
+                await js.InvokeVoidAsync("sessionStorage.setItem", "cultureSet", "true");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error setting language cookie: {ex.Message}");
+        }
+
+        navigationManager.NavigateTo(navigationManager.Uri, forceLoad: true);
+    }
+    private async Task HandleLogout()
+    {
+        await authService.Logout();
+    }
+    private async Task CloseMenu()
+    {
+        await js.InvokeVoidAsync("eval",
+            "document.querySelector('.navbar-toggler')?.click()");
+    }
+}

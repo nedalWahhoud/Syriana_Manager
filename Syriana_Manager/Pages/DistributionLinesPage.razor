@@ -1,0 +1,270 @@
+﻿@page "/distributionlines"
+@namespace Syriana_Manager.Components.Layout
+@inject IStringLocalizer<Syriana_Manager.Components.Layout.DistributionLinesPage> L
+<div class="mainDiv" @onclick="OnMainDiv">
+	<AuthorizeView>
+		<Authorized Context="authContext">
+			@if (!IsRendered.Initialized || !IsRendered.ParametersSet || !IsRendered.AfterRender)
+			{
+				<Syriana_Manager.Components.Layout.Loading />
+			}
+			else
+			{
+				@if (HasManageDistribution_linesPermission)
+				{
+					<div class="tableContiner">
+						<div class="topTable">
+							<div class="buttonsDiv">
+								<button class="btn addPlusB" @onclick="NewDistributionLine" title="@L["Addline"]">+</button>
+							</div>
+						</div>
+						@if (distributionLinesService.DownloadedDistributionLines == null || !distributionLinesService.DownloadedDistributionLines.Any())
+						{
+							<div class="d-flex justify-content-center align-items-center"
+								 style="min-height: 60vh;">
+								<p class="text-muted fs-5">
+									@L["NoDistribution"]
+								</p>
+							</div>
+						}
+						else
+						{
+							<table class="table table-bordered table-hover">
+								<tr>
+									<th>@L["Id"]</th>
+									<th>@L["NameLine"]</th>
+									<th>@L["Description"]</th>
+								</tr>
+								<tbody>
+									@foreach (var distributionLine in distributionLinesService.DownloadedDistributionLines)
+									{
+										<tr @oncontextmenu:preventDefault="true"
+											@oncontextmenu="@(e => OnSelectRow(distributionLine, e))"
+											@onpointerdown="(e) => OnTouchStart(distributionLine, e)"
+											@onpointermove="OnTouchMove"
+											@onpointerup="OnTouchEnd"
+											@onclick="(e)=> OnSelectRow(distributionLine,e)"
+											class="@(selectedDistributionLine != null && selectedDistributionLine.Id == distributionLine.Id ? "selected" : "")">
+											<td>@distributionLine.Id</td>
+											<td>@distributionLine.LineName</td>
+											<td>@distributionLine.Description</td>
+											<td>
+												<button class="btn btn-sm btn-warning me-1"
+														@onclick="() => EditDistributionLine(distributionLine)" disabled="@IsDeletingProcessing.Item1">
+													@L["Edit"]
+												</button>
+												<button class="btn btn-sm btn-danger"
+														@onclick="() => DeleteDistributionLine(distributionLine)" disabled="@IsDeletingProcessing.Item1">
+													@if (IsDeletingProcessing.Item1 && IsDeletingProcessing.Item2 == distributionLine.Id)
+													{
+														<span class="spinner-border spinner-border-sm"
+															  role="status"
+															  aria-hidden="true"></span>
+													}
+													else
+													{
+														<span>@L["Delete"]</span>
+													}
+												</button>
+											</td>
+										</tr>
+									}
+									@if (showContextMenu && selectedDistributionLine != null && IsDeletingProcessing.Item1 == false)
+									{
+										<div class="contextMenu"
+											 style="position: fixed; top:@(menuYpx); left:@(menuXpx);"
+											 @onclick:stopPropagation="true">
+											<ul>
+												<li @onclick="() => viaWhatasappShre(selectedDistributionLine)"><i class="bi bi-whatsapp me-1"></i> @L["ShareWhatsApp"]</li>
+											</ul>
+										</div>
+									}
+								</tbody>
+							</table>
+						}
+					</div>
+					@if (IsAdding)
+					{
+						<Syriana_Manager.Components.Layout.OverlayEditAddDistributionLines DistributionLine="new DistributionLines()" Action="Add" OnHandel="HandleEditAddDistributionLine" />
+					}
+					else if (IsEditing)
+					{
+						<Syriana_Manager.Components.Layout.OverlayEditAddDistributionLines DistributionLine="EditingDistributionLine" Action="Edit" OnHandel="HandleEditAddDistributionLine" />
+					}
+				}
+				else
+				{
+					<div style="display:flex; justify-content:center; align-items:center; height:80vh;">
+						<div class="alert alert-danger text-center">
+							@L["NoPermission"]
+						</div>
+					</div>
+				}
+			}
+		</Authorized>
+		<NotAuthorized>
+			<Syriana_Manager.Pages.LogIn />
+		</NotAuthorized>
+	</AuthorizeView>
+</div>
+
+@code {
+
+	private bool IsAdding = false;
+	private bool IsEditing = false;
+	private DistributionLines EditingDistributionLine = null!;
+	private bool HasManageDistribution_linesPermission = false;
+	protected async override Task OnInitializedAsync()
+	{
+		var authState = await authProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		HasManageDistribution_linesPermission = user.HasClaim("permission", "manageDistribution_lines") ||
+								user.HasClaim("permission", "fullAccess");
+		if (HasManageDistribution_linesPermission)
+		{
+			await distributionLinesService.GetAllDistributionLinesAsync();
+		}
+		// afterRender und ParameterSet true, weil wir nutzen die funktionen hier nicht
+		IsRendered.AfterRender = IsRendered.ParametersSet = true;
+		IsRendered.Initialized = true;
+	}
+
+	private void NewDistributionLine()
+	{
+		IsAdding = true;
+	}
+	private void EditDistributionLine(DistributionLines distributionLine)
+	{
+		EditingDistributionLine = new DistributionLines
+			{
+				Id = distributionLine.Id,
+				LineName = distributionLine.LineName,
+				Description = distributionLine.Description
+			};
+		IsEditing = true;
+	}
+	private (bool, int) IsDeletingProcessing = (false, 0);
+
+	private async Task DeleteDistributionLine(DistributionLines line)
+	{
+		if (line == null || line.Id <= 0)
+		{
+			await js.InvokeVoidAsync("alert", "Bitte wählen Sie eine Line aus.");
+			return;
+		}
+		IsDeletingProcessing = (true, line.Id);
+		var resultConfirm = await js.InvokeAsync<bool>("confirm", $"Möchten Sie das DistributionLine mit der ID {line.Id} wirklich löschen?");
+		if (resultConfirm)
+		{
+			var result = await distributionLinesService.DeleteDistributionLineAsync(line.Id);
+			if (!result.Result)
+			{
+				await js.InvokeVoidAsync("alert", result.Message);
+			}
+
+		}
+		IsDeletingProcessing = (false, line.Id);
+	}
+	private void HandleEditAddDistributionLine(string action)
+	{
+		if (action == "Add")
+		{
+			IsAdding = false;
+		}
+		else
+		{
+			IsEditing = false;
+			EditingDistributionLine = null!;
+		}
+	}
+
+	// Menu recht klicken
+	private bool showContextMenu = false;
+	private double menuX;
+	private double menuY;
+	private string menuXpx => $"{menuX}px";
+	private string menuYpx => $"{menuY}px";
+	private System.Timers.Timer? longPressTimer;
+	private double startX, startY;
+	private bool isDragging = false;
+	private DistributionLines? selectedDistributionLine;
+
+	private void OnSelectRow(DistributionLines distributionLine, MouseEventArgs e)
+	{
+		if (e.Button == 2) // right click
+		{
+			selectedDistributionLine = distributionLine;
+			menuX = e.ClientX;
+			menuY = e.ClientY;
+			showContextMenu = true;
+		}
+		selectedDistributionLine = distributionLine;
+	}
+	private void OnTouchStart(DistributionLines distributionLine, PointerEventArgs e)
+	{
+		startX = e.ClientX;
+		startY = e.ClientY;
+		isDragging = false;
+
+		//Timer für langes Drücken (eine halbe Sekunde)
+		longPressTimer = new System.Timers.Timer(600);
+		longPressTimer.Elapsed += (_, __) =>
+		{
+			if (!isDragging) // nur wenn nicht gezogen wird
+			{
+				InvokeAsync(() =>
+				{
+					selectedDistributionLine = distributionLine;
+					menuX = e.ClientX;
+					menuY = e.ClientY;
+					showContextMenu = true;
+					StateHasChanged();
+				});
+			}
+			longPressTimer?.Stop();
+		};
+		longPressTimer.AutoReset = false;
+		longPressTimer.Start();
+		// select die Row
+		selectedDistributionLine = distributionLine;
+	}
+	private void OnTouchMove(PointerEventArgs e)
+	{
+		// إذا تحرك الإصبع أكثر من 10px → اعتبره سحب
+		if (Math.Abs(e.ClientX - startX) > 10 || Math.Abs(e.ClientY - startY) > 10)
+		{
+			isDragging = true;
+			longPressTimer?.Stop();
+		}
+	}
+	private void OnTouchEnd(PointerEventArgs e)
+	{
+		// Wenn der Benutzer seinen Finger schnell anhebt → das Menü öffnet sich nicht
+		longPressTimer?.Stop();
+	}
+	private async Task viaWhatasappShre(DistributionLines selectedDistributionLine)
+	{
+		// get all customers
+		await customersService.GetAllCustomersByLineId(selectedDistributionLine.Id);
+		// get customers von der distribution line 
+		List<Customers> customers = customersService.DownloadedCustomers.Where(c => c.DistributionLineId == selectedDistributionLine.Id).ToList();
+		customers = customers.OrderBy(c => c.StopNumber).ToList();
+		if (customers == null || !customers.Any())
+		{
+			await js.InvokeVoidAsync("alert", "Keine Kunden in dieser Verteilungslinie gefunden.");
+			showContextMenu = false;
+			return;
+		}
+
+		var result = await whatsAppService.SendCustomerInfo(customers);
+		if (!result.Result)
+		{
+			await js.InvokeVoidAsync("alert", result.Message);
+		}
+		showContextMenu = false;
+	}
+	private void OnMainDiv()
+	{
+		showContextMenu = false;
+	}
+}

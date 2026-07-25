@@ -1,0 +1,500 @@
+﻿@page "/customers"
+@namespace Syriana_Manager.Components.Layout
+@inject IStringLocalizer<Syriana_Manager.Components.Layout.CustomersPage> L
+<div class="mainDiv">
+	<AuthorizeView>
+		<Authorized Context="authContext">
+			@if (!IsRendered.Initialized || !IsRendered.ParametersSet || !IsRendered.AfterRender)
+			{
+				<Syriana_Manager.Components.Layout.Loading />
+			}
+			else
+			{
+				@if (IsHasManageCustomersPermission)
+				{
+					List<Customers> customersToDisplay = customersService.DownloadedCustomers;
+					if (FilteredCustomers != null)
+					{
+						customersToDisplay = FilteredCustomers;
+					}
+					<div tabindex="0" id="scrollContainer" class="tableContiner">
+						<div class="topTable">
+							<div class="buttonsDiv">
+								@* add neu Product *@
+								<button class="btn addPlusB" @onclick="NewCustomer" disabled="@(!IsHasEditCustomersPermission)" title="@L["AddNewCustomer"]">+</button>
+								@* choose the Columns *@
+								<div class="h-100 d-flex">
+									<button class="btn columnsB dropdown-toggle" type="button" data-bs-toggle="dropdown" />
+									<ul class="dropdown-menu p-3" style="max-height:300px; overflow-y:auto; min-width: 250px;">
+										@foreach (var col in columnOptions)
+										{
+											<li>
+												<div class="form-check form-switch">
+													<input class="form-check-input" type="checkbox" id="@col.Key" @bind="col.IsVisible" @bind:after="OnColumnChanged" />
+													<label class="form-check-label" for="@col.Key">
+														@col.Label
+													</label>
+												</div>
+											</li>
+										}
+									</ul>
+								</div>
+							</div>
+							<div class="dropdownListsDiv">
+								<select id="distributionLineSelect" class="DropdownList" @bind="selectedDistributionLineId" @bind:after="() => AfterDistributionLineChanged(false)">
+									@foreach (var distributionLine in distributionLinesService.DownloadedDistributionLines)
+									{
+										<option value="@distributionLine.Id">@distributionLine.LineName</option>
+									}
+								</select>
+								<select id="stopNumberSelect" class="DropdownList" @bind="selectedStopNumberId" @bind:after="AfterStopNumberChanged">
+									<option value="0">@L["StopNumber"]</option>
+									@foreach (var customer in customersService.DownloadedCustomers
+																								.Where(c => c.DistributionLineId == selectedDistributionLineId)
+																								.DistinctBy(c => c.StopNumber)
+																								.OrderBy(c => c.StopNumber))
+									{
+										<option value="@customer.StopNumber">@customer.StopNumber</option>
+									}
+								</select>
+							</div>
+							@* Suchen Input*@
+							<div class="searchDiv">
+								<div class="input-group">
+									<input placeholder="@L["Placeholder"]" class="form-control" type="text" @bind="SearchValue" @bind:event="oninput" @bind:after="OnSearchChanged" />
+									<button class="btn btn-danger" type="button" @onclick="ClearSearch">
+										<i class="fas fa-times"></i>
+									</button>
+								</div>
+							</div>
+						</div>
+						<table class="table table-bordered table-hover">
+							<tr>
+								@if (ShowColumn("Id"))
+								{
+									<th>@L["Id"]</th>
+								}
+								@if (ShowColumn("Name"))
+								{
+									<th>@L["Name"]</th>
+								}
+								@if (ShowColumn("Address"))
+								{
+									<th>@L["Address"]</th>
+								}
+								@if (ShowColumn("Coordinates"))
+								{
+									<th>@L["Coordinates"]</th>
+								}
+								@if (ShowColumn("PhoneNumber"))
+								{
+									<th>@L["PhoneNumber"]</th>
+								}
+								@if (ShowColumn("EMail"))
+								{
+									<th>@L["Email"]</th>
+								}
+								@if (ShowColumn("Note"))
+								{
+									<th>@L["Note"]</th>
+								}
+								@if (ShowColumn("Direction"))
+								{
+									<th>@L["Line"]</th>
+								}
+								@if (ShowColumn("StopNumber"))
+								{
+									<th>@L["StopNumber"]</th>
+								}
+								@if (ShowColumn("PIN"))
+								{
+									<th>@L["PIN"]</th>
+								}
+								<th style="min-width:40px;">⋮</th>
+							</tr>
+							<tbody>
+								@if (customersToDisplay == null || customersToDisplay.Count == 0)
+								{
+									<tr id="loadingMessage">
+										<td colspan="13" class="text-center py-4 alert-warning font-weight-bold" style="color: #007bff;">
+											<i class="bi bi-exclamation-circle mr-2"></i> @L["NoCustomers"]
+										</td>
+									</tr>
+								}
+								else
+								{
+									@foreach (var customer in customersToDisplay)
+									{
+										<tr class="@customersService.GetRowClass(customer)">
+											@if (ShowColumn("Id"))
+											{
+												<td>@customer.Id</td>
+											}
+											@if (ShowColumn("Name"))
+											{
+												<td>@(IsArabic ? customer.Name_ar : customer.Name_de) </td>
+											}
+											@if (ShowColumn("Address"))
+											{
+												<td>
+													@customer.Street @customer.BuildingNumber<br />
+													@customer.PostalCode @customer.City
+												</td>
+											}
+											@if (ShowColumn("Coordinates"))
+											{
+												<td>
+													La: @customer.Latitude <br />
+													Lo: @customer.Longitude
+												</td>
+											}
+											@if (ShowColumn("PhoneNumber"))
+											{
+												<td>@customer.PhoneNumber</td>
+											}
+											@if (ShowColumn("EMail"))
+											{
+												<td>@customer.Email</td>
+											}
+											@if (ShowColumn("Note"))
+											{
+												<td>@(IsAdding ? customer.Notes_ar : customer.Notes_de)</td>
+											}
+											@if (ShowColumn("Direction"))
+											{
+												<td>@(customer.DistributionLine?.LineName ?? "Null DistributionLine")</td>
+											}
+											@if (ShowColumn("StopNumber"))
+											{
+												<td>@customer.StopNumber</td>
+											}
+											@if (ShowColumn("PIN"))
+											{
+												<td>@customer.PIN</td>
+											}
+											<td>
+												<div class="dropdown">
+													<button disabled="@thisCustomerProcess.IsProcessing" class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-container="body">
+														@if (thisCustomerProcess.IsProcessing && thisCustomerProcess.CustomerId == customer.Id)
+														{
+															<span class="spinner-border spinner-border-sm"
+															role="status"
+															aria-hidden="true"></span>
+														}
+														else
+														{
+															<span class="@(IsArabic ? "ms-2" : "me-2")">⋮</span>
+														}
+													</button>
+													<Syriana_Manager.Components.Layout.CustomDropdownLayout customer="customer" FilteredCustomers="FilteredCustomers" Permissions="new (IsHasEditCustomersPermission,IsHasManageDebtPermission,IsHasCrateCustomerOneTimePaymentPermission)" OnHandel="HandleCustomDropdown" />
+												</div>
+											</td>
+										</tr>
+									}
+								}
+							</tbody>
+						</table>
+					</div>
+					@* Add und Edit *@
+					if (IsAdding)
+					{
+						<Syriana_Manager.Components.Layout.OverlayEditAddCustomers customer="new Customers()" Action="Add" OnHandel="HandleEditAdd" />
+					}
+					else if (IsEditing)
+					{
+						<Syriana_Manager.Components.Layout.OverlayEditAddCustomers customer="EditingCustomer" Action="Edit" OnHandel="HandleEditAdd" />
+					}
+					else if (IsOneTimePaymentProcessing)
+					{
+						<Syriana_Manager.Components.Layout.OverlayEditAddFormOneTimePayment Action="add" OneTimePayment="newOneTimePayment ?? new()" OnHandel="HandleOneTimePayment" />
+					}
+					@* map select *@
+					<Syriana_Manager.Components.Layout.MapSelect />
+				}
+				else
+				{
+					<div style="display:flex; justify-content:center; align-items:center; height:80vh;">
+						<div class="alert alert-danger text-center">
+							@L["NoPermission"]
+						</div>
+					</div>
+				}
+			}
+		</Authorized>
+		<NotAuthorized>
+			<Syriana_Manager.Pages.LogIn />
+		</NotAuthorized>
+	</AuthorizeView>
+</div>
+@code {
+	// Column
+	private List<ColumnOption> columnOptions = new()
+	{
+	  new("Id", "Id", false),
+	  new("Name", "Name", true),
+	  new("Anschrift", "Address", true),
+	  new("Koordinaten", "Coordinates", false),
+	  new("Tel.", "PhoneNumber", false),
+	  new("E-Mail", "EMail", false),
+	  new("Note", "Note", true),
+	  new("Richtung", "Direction", false),
+	  new("Ha-Nr", "StopNumber", true),
+	  new("PIN", "PIN", false),
+	};
+	private bool ShowColumn(string key) => columnOptions.FirstOrDefault(c => c.Key == key)?.IsVisible == true;
+
+	private bool IsAdding = false;
+	private int selectedDistributionLineId = 0;
+	private List<(Task<ValidationResult> task, int lineId)> customersTask = new();
+	private bool IsHasManageCustomersPermission = false;
+	private bool IsHasCrateCustomerOneTimePaymentPermission = false;
+	private bool IsHasEditCustomersPermission = false;
+	private bool IsHasManageDebtPermission = false;
+	protected async override Task OnInitializedAsync()
+	{
+		var authState = await authProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		IsHasManageCustomersPermission = user.HasClaim("permission", "manageCustomers") ||
+								user.HasClaim("permission", "fullAccess");
+		IsHasManageDebtPermission = user.HasClaim("permission", "manageDebt") || user.HasClaim("permission", "fullAccess");
+		IsHasEditCustomersPermission = user.HasClaim("permission", "editCustomers") || user.HasClaim("permission", "fullAccess");
+		IsHasCrateCustomerOneTimePaymentPermission = user.HasClaim("permission", "manageCustomerOneTimePayment") || user.HasClaim("permission", "fullAccess");
+
+		IsRendered.Initialized = true;
+	}
+	protected override async Task OnParametersSetAsync()
+	{
+		if (IsHasManageCustomersPermission)
+		{
+			await distributionLinesService.GetAllDistributionLinesAsync();
+
+			// start holen der Kunden für jede line in Taks
+			foreach (var line in distributionLinesService.DownloadedDistributionLines)
+			{
+				var task = customersService.GetAllCustomersByLineId(line.Id);
+				customersTask.Add((task, line.Id));
+			}
+			// load the selected distributionLine id from local storage
+			selectedDistributionLineId = await localStorageService.Get<int>("selectedDistributionLineId");
+			if (selectedDistributionLineId > 0)
+			{
+				await AfterDistributionLineChanged(true);
+			}
+			else
+			{
+				if (distributionLinesService.DownloadedDistributionLines != null && distributionLinesService.DownloadedDistributionLines.Count > 0)
+				{
+					// wenn keine line id in local storage, dann nehmen wir die erste line id von der heruntergeladenen Liste, damit die Kunden sofort angezeigt werden
+					selectedDistributionLineId = distributionLinesService.DownloadedDistributionLines.FirstOrDefault()?.Id ?? 0;
+
+					// wenn keine line gefunden wurde, dann holen wir erste kunden
+					await customersService.GetAllCustomersByLineId(selectedDistributionLineId);
+
+					await AfterDistributionLineChanged(true);
+				}
+			}
+			selectedStopNumberId = await localStorageService.Get<int>("selectedStopNummerId");
+			if (selectedStopNumberId > 0)
+			{
+				await customersTask.Where(t => t.lineId == selectedDistributionLineId).Select(t => t.task).FirstOrDefault()!;
+
+				await AfterStopNumberChanged();
+			}
+		}
+		IsRendered.ParametersSet = true;
+	}
+	private async Task OnColumnChanged()
+	{
+		// Immer wenn sich eine Checkbox ändert, speichern wir die Liste.
+		await localStorageService.Set("columnOptionsCustomers", columnOptions);
+	}
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			// wenn die key in ColmunOptions geändert wurde dann remove was in Storage gespeichert
+			columnOptions = await localStorageService.SyncColumnOptionsAsync("columnOptionsCustomers", columnOptions, c => c.Key);
+			IsRendered.AfterRender = true;
+		}
+	}
+	// add
+	private void NewCustomer()
+	{
+		IsAdding = true;
+	}
+	private async Task HandleEditAdd((string action, CustomerProcess customerProcess) args)
+	{
+		if (args.action == "Add")
+		{
+			if (args.customerProcess.Result != null && args.customerProcess.Result.Result)
+			{
+				await UpdateLocalCustomsdata();
+			}
+
+			IsAdding = false;
+		}
+		else if (args.action == "Edit")
+		{
+			if (args.customerProcess.Result != null && args.customerProcess.Result.Result)
+			{
+				await UpdateLocalCustomsdata();
+			}
+
+			IsEditing = false;
+			EditingCustomer = null!;
+		}
+		else if (args.action == "Cancel")
+		{
+			IsAdding = false;
+			IsEditing = false;
+			EditingCustomer = null!;
+		}
+		// nach dem Hinzufügen oder Bearbeiten einer Verteilungslinie die Liste der Verteilungslinien aktualisieren
+		if (args.action == "Add" || args.action == "Edit")
+			StateHasChanged();
+
+	}
+	// filter 
+	private List<Customers> FilteredCustomers = null!;
+	private async Task AfterDistributionLineChanged(bool ifDefaultStNrId)
+	{
+
+		// clear die InputSuche
+		SearchValue = string.Empty;
+
+		var task = customersTask.Where(t => t.lineId == selectedDistributionLineId).Select(t => t.task).FirstOrDefault();
+		if (task != null)
+		{
+			if (!task.IsCompleted)
+				await task;
+		}
+		else
+			await customersService.GetAllCustomersByLineId(selectedDistributionLineId);
+
+
+		if (customersService.DownloadedCustomers.Count > 0)
+		{
+			// wenn die aktuelle ausgewählte StopNumberId nicht in der neuen gefilterten Liste vorhanden ist, dann setzen wir die StopNumberId auf 0, damit alle Kunden angezeigt werden, und löschen wir auch die LocalStronge
+			if (!ifDefaultStNrId)
+			{
+				selectedStopNumberId = 0;
+				await localStorageService.Remove("selectedStopNummerId");
+			}
+			// dann filtern
+			FilteredCustomers = customersService.DownloadedCustomers.Where(c => (c.DistributionLineId == selectedDistributionLineId || selectedDistributionLineId == 0)
+			&& (c.StopNumber == selectedStopNumberId || selectedStopNumberId == 0)
+			).ToList();
+
+		}
+		else
+		{
+			FilteredCustomers = null!;
+		}
+
+		// save the selected category id in local storage
+		await localStorageService.Set("selectedDistributionLineId", selectedDistributionLineId);
+	}
+	private int selectedStopNumberId = 0;
+	private async Task AfterStopNumberChanged()
+	{
+		// clear die InputSuche
+		SearchValue = string.Empty;
+
+		if (customersService.DownloadedCustomers.Count > 0)
+		{
+			FilteredCustomers = customersService.DownloadedCustomers.Where(c => (c.StopNumber == selectedStopNumberId || selectedStopNumberId == 0)
+			&& (c.DistributionLineId == selectedDistributionLineId || selectedDistributionLineId == 0)
+			).ToList();
+		}
+		else
+		{
+			FilteredCustomers = null!;
+		}
+
+		// Speichere die ID der ausgewählten Kategorie im Local Storage.
+		await localStorageService.Set("selectedStopNummerId", selectedStopNumberId);
+	}
+	// Suche
+	private string SearchValue { get; set; } = "";
+	private async Task OnSearchChanged()
+	{
+		if ((customersService.DownloadedCustomers.Count == 0 || string.IsNullOrEmpty(SearchValue)))
+		{
+			await ClearSearch();
+			return;
+		}
+		FilteredCustomers = customersService.DownloadedCustomers
+			.Where(p =>
+				string.IsNullOrWhiteSpace(SearchValue) ||
+				(!string.IsNullOrEmpty(p.Name_de) && p.Name_de.Contains(SearchValue, StringComparison.OrdinalIgnoreCase)) ||
+				(!string.IsNullOrEmpty(p.Name_ar) && p.Name_ar.Contains(SearchValue, StringComparison.OrdinalIgnoreCase)))
+			.Where(p => selectedDistributionLineId == 0 || p.DistributionLineId == selectedDistributionLineId)
+		.ToList();
+	}
+	private async Task ClearSearch()
+	{
+		// clear searchCustomer
+		SearchValue = string.Empty;
+
+		await AfterDistributionLineChanged(true);
+		await AfterStopNumberChanged();
+	}
+	// Dropdown 
+	private Customers EditingCustomer = null!;
+	private CustomerProcess thisCustomerProcess = new();
+	private bool IsEditing = false;
+
+	private async Task HandleCustomDropdown((string action, CustomerProcess customerProcess, bool IsEditing,OneTimePayment oneTimePayment, bool IsOneTimePaymentProcessing) args)
+	{
+		if (args.action == "Delete")
+		{
+			if (args.customerProcess.Result != null && args.customerProcess.Result.Result)
+			{
+				await UpdateLocalCustomsdata();
+			}
+			thisCustomerProcess = args.customerProcess;
+
+		}
+		else if (args.action == "Edit")
+		{
+
+			this.EditingCustomer = args.customerProcess.EditingCustomer;
+			this.IsEditing = args.IsEditing!;
+		}
+		else if (args.action == "oneTimePayment")
+		{
+			this.IsOneTimePaymentProcessing = args.IsOneTimePaymentProcessing;
+			this.newOneTimePayment = args.oneTimePayment;
+		}
+
+		StateHasChanged();
+	}
+	public async Task UpdateLocalCustomsdata()
+	{
+		customersService.DownloadProcesses.Clear();
+		customersService.DownloadedCustomers.Clear();
+		await customersService.GetAllCustomersByLineId(selectedDistributionLineId);
+
+		// update auch die filtered list
+		if (selectedDistributionLineId > 0)
+			await AfterDistributionLineChanged(true);
+		if (selectedStopNumberId > 0)
+			await AfterStopNumberChanged();
+	}
+	// oneTimePayment
+	public bool IsOneTimePaymentProcessing = false;
+	private OneTimePayment newOneTimePayment = null!;	
+	public void HandleOneTimePayment((string action, OneTimePayment oneTimePayment) args)
+	{
+		if (args.action == "add")
+		{
+			IsOneTimePaymentProcessing = false;
+			newOneTimePayment = null!;
+		}
+		else if (args.action == "cancel")
+		{
+			this.IsOneTimePaymentProcessing = false;
+			this.newOneTimePayment = null!;
+		}
+	}
+}

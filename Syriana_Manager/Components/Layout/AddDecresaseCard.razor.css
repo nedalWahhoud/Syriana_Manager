@@ -1,0 +1,45 @@
+﻿.productsCart {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+    .productsCart input {
+        width: 60px;
+        text-align: center;
+    }
+/* button */
+.btnProduct,
+.btnProductDecrease,
+.btnProductAdded {
+    height: 35px;
+    padding: 0 10px;
+    border-radius: 6px;
+    border: none;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+}
+.btnProduct {
+    background-color: var(--btnBackgroundColor);
+}
+
+    .btnProduct:hover {
+        background-color: var(--btnBackgroundColorHover);
+    }
+
+.btnProductAdded {
+    background-color: var(--btnBackgroundColorProductAdded);
+}
+
+    .btnProductAdded:hover {
+        background-color: var(--btnBackgroundColorProductAddedHover);
+    }
+
+.btnProductDecrease {
+    background-color: #ff6b6b;
+}
+
+    .btnProductDecrease:hover {
+        background-color: #e63946;
+    }

@@ -1,0 +1,359 @@
+﻿@page "/pGroupCat"
+@namespace Syriana_Manager.Components.Layout
+@inject IStringLocalizer<Syriana_Manager.Components.Layout.PGruppeCatPage> L
+<div class="mainDiv">
+	<AuthorizeView>
+		<Authorized Context="authContext">
+			@if (!IsRendered.Initialized || !IsRendered.ParametersSet || !IsRendered.AfterRender)
+			{
+				<Syriana_Manager.Components.Layout.Loading />
+			}
+			else
+			{
+				<div class="tableContiner">
+					<div class="topPage">
+						<div class="buttonsDiv">
+							@* choose the Columns *@
+							<div class="h-100 d-flex align-items-center">
+								<button class="btn columnsB dropdown-toggle" type="button" data-bs-toggle="dropdown" />
+								<ul class="dropdown-menu p-3" style="max-height:300px; overflow-y:auto; min-width: 250px;">
+									@foreach (var col in tableOptions)
+									{
+										<li>
+											<div class="form-check form-switch">
+												<input class="form-check-input" type="checkbox" id="@col.Key" @bind="col.IsVisible" @bind:after=" ()=> OnTableChanged(col)" />
+												<label class="form-check-label" for="@col.Key">
+													@col.Label
+												</label>
+											</div>
+										</li>
+									}
+								</ul>
+							</div>
+						</div>
+					</div>
+					@* Kategories *@
+					@if (ShowColumn("CaTa"))
+					{
+						@if (IsHasMangeCategories)
+						{
+							<div class="topTable">
+								<div class="buttonsDiv">
+									<button class="btn addPlusB" @onclick="NewCategory" title="Add neue Kategorie">+</button>
+								</div>
+							</div>
+							<table class="table table-bordered table-hover">
+								<tr>
+									<th>@L["Id"]</th>
+									<th>@L["Name"]</th>
+									<th>@L["18+"]</th>
+									<th>@L["IsActive"]</th>
+								</tr>
+								<tbody>
+									@foreach (var category in categoryService.DownloadedCategories)
+									{
+										<tr>
+											<td>@category.Id</td>
+											<td>@(IsArabic ? category.Name_ar : category.Name_de)</td>
+											<td><div style="pointer-events: none; opacity: 1;"><InputCheckbox @bind-Value="category.Requires18Plus" /></div></td>
+											<td>
+												<div style="pointer-events: none; opacity: 1;">
+													<InputCheckbox @bind-Value="category.IsAktiv" />
+												</div>
+											</td>
+											<td>
+												<button class="btn btn-sm btn-warning me-1"
+												@onclick="() => EditGroup(category)" disabled="@IsDeletingProcessing.Item1">
+													@L["Edit"]
+												</button>
+												<button class="btn btn-sm btn-danger"
+												@onclick="() => DeleteCategory(category.Id)" disabled="@IsDeletingProcessing.Item1">
+													@if (IsDeletingProcessing.Item1 && IsDeletingProcessing.Item2 == category.Id)
+													{
+														<span class="spinner-border spinner-border-sm"
+														role="status"
+														aria-hidden="true"></span>
+													}
+													else
+													{
+														<span>@L["Delete"]</span>
+													}
+												</button>
+											</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						}
+						else
+						{
+							<div style="display:flex; justify-content:center; align-items:center; height:80vh;">
+								<div class="alert alert-danger text-center">
+									Sie haben keine Berechtigung für diese Seite
+								</div>
+							</div>
+						}
+						@if (IsAdding)
+						{
+							<Syriana_Manager.Components.Layout.OverlayEditAddCategories category="new Categories()" Action="Add" OnHandel="HandleEditCategory" />
+						}
+						@if (IsEditing)
+						{
+							<Syriana_Manager.Components.Layout.OverlayEditAddCategories category="EditingCategory" Action="Edit" OnHandel="HandleEditCategory" />
+						}
+					}
+					@*produckt grouppe*@
+					@if (ShowColumn("PGrTa"))
+					{
+						@if (IsHasMangeProduct_groups)
+						{
+							<div class="topTable">
+								<div class="buttonsDiv">
+									<button class="btn addPlusB" @onclick="NewGroup" title="Add neue Vertriebslinie">+</button>
+								</div>
+							</div>
+							<table class="table table-bordered table-hover">
+								<tr>
+									<th>@L["Id"]</th>
+									<th>@L["Name"]</th>
+								</tr>
+								<tbody>
+									@foreach (var group in productGroupService.DownloadedproductGroups)
+									{
+										<tr>
+											<td>@group.Id</td>
+											<td>@(IsArabic ? group.GroupName_ar : group.GroupName_de)</td>
+											<td>
+												<button class="btn btn-sm btn-warning me-1"
+												@onclick="() => EditGroup(group)" disabled="@IsDeletingProcessingGroup.Item1">
+													Bearbeiten
+												</button>
+												<button class="btn btn-sm btn-danger"
+												@onclick="() => DeleteGroup(group.Id)" disabled="@IsDeletingProcessingGroup.Item1">
+													@if (IsDeletingProcessingGroup.Item1 && IsDeletingProcessingGroup.Item2 == group.Id)
+													{
+														<span class="spinner-border spinner-border-sm"
+														role="status"
+														aria-hidden="true"></span>
+													}
+													else
+													{
+														<span>@L["Delete"]</span>
+													}
+												</button>
+											</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						}
+						else
+						{
+							<div style="display:flex; justify-content:center; align-items:center; height:80vh;">
+								<div class="alert alert-danger text-center">
+									@L["NoPermission"]
+								</div>
+							</div>
+						}
+
+						@if (IsAddingGroup)
+						{
+							<Syriana_Manager.Components.Layout.OverlayEditAddGroupProducts groupProduct="new GroupProducts()" Action="Add" OnHandel="HandleEditAddGroupProduct" />
+						}
+						@if (IsEditingGroup)
+						{
+							<Syriana_Manager.Components.Layout.OverlayEditAddGroupProducts groupProduct="EditingGroupProduct" Action="Edit" OnHandel="HandleEditAddGroupProduct" />
+						}
+					}
+				</div>
+			}
+		</Authorized>
+		<NotAuthorized>
+			<Syriana_Manager.Pages.LogIn />
+		</NotAuthorized>
+	</AuthorizeView>
+</div>
+@code {
+
+	Task[] TasksArray = new Task[2];
+	private List<ColumnOption> tableOptions = new()
+	{
+	  new("CategoriesTable", "CaTa", false),
+	  new("ProductsGroupTable","PGrTa", false),
+	};
+	private bool ShowColumn(string key) => tableOptions.FirstOrDefault(c => c.Key == key)?.IsVisible == true;
+	private bool IsHasMangeCategories = false;
+	private bool IsHasMangeProduct_groups = false;
+	protected async override Task OnInitializedAsync()
+	{
+		// kategories
+		var authState = await authProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		IsHasMangeCategories = user.HasClaim("permission", "manageCategories") ||
+								user.HasClaim("permission", "fullAccess");
+
+		// group products
+		IsHasMangeProduct_groups = user.HasClaim("permission", "manageProduct_groups") ||
+								user.HasClaim("permission", "fullAccess");
+
+
+		IsRendered.Initialized = true;
+	}
+	protected override async Task OnParametersSetAsync()
+	{
+
+		if (IsHasMangeCategories)
+		{
+			// get all categories
+			TasksArray[0] = categoryService.GetAllCategoriesAsync();
+		}
+
+		if (IsHasMangeProduct_groups)
+		{
+			//
+			TasksArray[1] = productGroupService.GetAllGroupProductsAsync();
+		}
+
+		// wemm doe categories saved angezeigt muss, dann muss die abholung sofort erledigen
+		if(tableOptions[0].IsVisible)
+		{
+			await TasksArray[0];
+		}
+		if (tableOptions[1].IsVisible)
+		{
+			await TasksArray[1];
+		}
+
+		IsRendered.ParametersSet = true;
+	}
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			// wenn die key in ColmunOptions geändert wurde dann remove was in Storage gespeichert
+			tableOptions = await localStorageService.SyncColumnOptionsAsync("tableOptionsPGroupCat", tableOptions, c => c.Key);
+			IsRendered.AfterRender = true;
+			StateHasChanged();
+		}
+	}
+	// table options
+	private async Task OnTableChanged(ColumnOption col)
+	{
+		if (col.Key == "CaTa")
+		{
+			await TasksArray[0];
+		}
+		else if (col.Key == "PGrTa")
+		{
+			await TasksArray[1];
+		}
+		// Immer wenn sich eine Checkbox ändert, speichern wir die Liste.
+		await localStorageService.Set("tableOptionsPGroupCat", tableOptions);
+	}
+
+	// Katagorie
+	private Categories EditingCategory = null!;
+	private bool IsAdding = false;
+	private bool IsEditing = false;
+	private void NewCategory()
+	{
+		IsAdding = true;
+	}
+	private void EditGroup(Categories category)
+	{
+		EditingCategory = new Categories
+			{
+				Id = category.Id,
+				Name_de = category.Name_de,
+				Name_ar = category.Name_ar,
+				Requires18Plus = category.Requires18Plus,
+				IsAktiv = category.IsAktiv
+			};
+		IsEditing = true;
+
+	}
+	private (bool, int) IsDeletingProcessing = (false, 0);
+	private async Task DeleteCategory(int id)
+	{
+		if (id <= 0)
+		{
+			await js.InvokeVoidAsync("alert", "Please select a Category");
+			return;
+		}
+		IsDeletingProcessing = (true, id);
+		var resultConfirm = await js.InvokeAsync<bool>("confirm", $"Möchten Sie das Category mit der ID {id} wirklich löschen?");
+		if (resultConfirm)
+		{
+			var result = await categoryService.DeleteCategoryAsync(id);
+			if (!result.Result)
+			{
+				await js.InvokeVoidAsync("alert", result.Message);
+			}
+		}
+		IsDeletingProcessing = (false, id);
+	}
+	private void HandleEditCategory(string action)
+	{
+		if (action == "Add")
+		{
+			IsAdding = false;
+		}
+		else
+		{
+			IsEditing = false;
+			EditingCategory = null!;
+		}
+	}
+	// producktGrouppe 
+	private GroupProducts EditingGroupProduct = null!;
+	private bool IsAddingGroup = false;
+	private bool IsEditingGroup = false;
+
+	private void NewGroup()
+	{
+		IsAddingGroup = true;
+	}
+	private void EditGroup(GroupProducts group)
+	{
+		EditingGroupProduct = new GroupProducts
+			{
+				Id = group.Id,
+				GroupName_de = group.GroupName_de,
+				GroupName_ar = group.GroupName_ar
+			};
+		IsEditingGroup = true;
+	}
+	private (bool, int) IsDeletingProcessingGroup = (false, 0);
+	private async Task DeleteGroup(int id)
+	{
+		if (id <= 0)
+		{
+			await js.InvokeVoidAsync("alert", "Please select a Group");
+			return;
+		}
+		IsDeletingProcessingGroup = (true, id);
+		var resultConfirm = await js.InvokeAsync<bool>("confirm", $"Möchten Sie das Gruppe mit der ID {id} wirklich löschen?");
+		if (resultConfirm)
+		{
+			var result = await productGroupService.DeleteGroupProducts(id);
+			if (!result.Result)
+			{
+				await js.InvokeVoidAsync("alert", result.Message);
+			}
+
+		}
+		IsDeletingProcessingGroup = (false, id);
+	}
+	private void HandleEditAddGroupProduct(string action)
+	{
+		if (action == "Add")
+		{
+			IsAddingGroup = false;
+		}
+		else
+		{
+			IsEditingGroup = false;
+			EditingGroupProduct = null!;
+		}
+	}
+}

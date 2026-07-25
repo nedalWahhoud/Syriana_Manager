@@ -1,0 +1,336 @@
+﻿@page "/discountcode"
+@namespace Syriana_Manager.Components.Layout
+@inject IStringLocalizer<Syriana_Manager.Components.Layout.Discountcode> L
+<div class="mainDiv" @onclick="OnMainDiv">
+    <AuthorizeView>
+        <Authorized Context="authContext">
+            @if (!IsRendered.Initialized || !IsRendered.ParametersSet || !IsRendered.AfterRender)
+            {
+                <Syriana_Manager.Components.Layout.Loading />
+            }
+            else
+            {
+                @if (HasManageDiscountsPermision)
+                {
+                    <div class="tableContiner">
+                        <div class="topTable">
+                            <div class="buttonsDiv">
+                                <button class="btn btn-success h-100 d-flex " @onclick="() => OpenAddForm(true,true)">
+                                    <i class="bi bi-plus-lg"></i> Rabattcode
+                                </button>
+                                <button class="btn btn-info text-white h-100 d-flex" @onclick="() => OpenAddForm(false,true)">
+                                    <i class="bi bi-plus-lg"></i> Kategorie-Code
+                                </button>
+                                @* choose the Columns *@
+                                <div class="h-100 d-flex align-items-center">
+                                    <button class="btn columnsB dropdown-toggle" type="button" data-bs-toggle="dropdown" />
+                                    <ul class="dropdown-menu p-3" style="max-height:300px; overflow-y:auto; min-width: 250px;">
+                                        @foreach (var col in columnOptions)
+                                        {
+                                            <li>
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox" id="@col.Key" @bind="col.IsVisible" @bind:after="OnColumnChanged" />
+                                                    <label class="form-check-label" for="@col.Key">
+                                                        @col.Label
+                                                    </label>
+                                                </div>
+                                            </li>
+                                        }
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        @* table discount codes *@
+                        @if (ShowColumn("RaTa"))
+                        {
+                            <table class="table text-center align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>@L["Code"]</th>
+                                        <th>@L["Discount"]</th>
+                                        <th>@L["Use"]</th>
+                                        <th>@L["StartDate"]</th>
+                                        <th>@L["EndDate"]</th>
+                                        <th>@L["DiscountType"]</th>
+                                        <th>@L["Status"]</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in discountService.DownloadedDiscountCodes)
+                                    {
+                                        DateTime now = DateTime.Now;
+
+                                        var isActiveNow = item.IsActive
+                                        && item.StartDate <= now
+                                        && item.EndDate >= now;
+                                        <tr @key="item.Id"
+                                        @oncontextmenu:preventDefault="true"
+                                        @oncontextmenu="@(e => OnSelectRow(item,null!, e))"
+                                        @onclick="(e) => OnSelectRow(item,null!, e)"
+                                        @ondblclick="(e) => OnDoubleTap(item,null!, e)"
+                                        class="@(isActiveNow ? "bg-success text-white" : "bg-danger text-white")">
+                                            <td>@item.Code</td>
+                                            <td>@item.DiscountAmount @(item.DiscountType == DiscountType.Percentage ? "%" : "€")</td>
+                                            <td>@item.TimesUsed / @item.UsageLimit</td>
+                                            <td>@item.StartDate.ToString("yyyy-MM-dd")</td>
+                                            <td>@item.EndDate.ToString("yyyy-MM-dd")</td>
+                                            <td>@item.DiscountType</td>
+                                            <td>@item.IsActive</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                        @if (ShowColumn("KaTa"))
+                        {
+                            @* table discount category *@
+                            <table class="table text-center align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>@L["Category"]</th>
+                                        <th>@L["Code"]</th>
+                                        <th>@L["Discount"]</th>
+                                        <th>@L["Use"]</th>
+                                        <th>@L["StartDate"]</th>
+                                        <th>@L["EndDate"]</th>
+                                        <th>@L["DiscountType"]</th>
+                                        <th>@L["Status"]</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in discountService.DownloadedDiscountCategory)
+                                    {
+                                        DateTime now = DateTime.Now;
+
+                                        var isActiveNow = item.IsActive
+                                        && item.StartDate <= now
+                                        && item.EndDate >= now;
+                                        <tr @key="item.Id"
+                                        @oncontextmenu:preventDefault="true"
+                                        @oncontextmenu="@(e => OnSelectRow(null!,item, e))"
+                                        @onclick="(e) => OnSelectRow(null!,item, e)"
+                                        @ondblclick="(e) => OnDoubleTap(null!,item, e)"
+                                        class="@(isActiveNow ? "bg-success text-white" : "bg-danger text-white")">
+                                            <td>@(item.Category != null ? item.Category.Name_de : "Fehler")</td>
+                                            <td>@item.Code</td>
+                                            <td>@item.DiscountAmount @(item.DiscountType == DiscountType.Percentage ? '%' : '€')</td>
+                                            <td>@item.TimesUsed / @item.UsageLimit</td>
+                                            <td>@item.StartDate.ToString("yyyy-MM-dd")</td>
+                                            <td>@item.EndDate.ToString("yyyy-MM-dd")</td>
+                                            <td>@item.DiscountType</td>
+                                            <td>@item.IsActive</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </div>
+                    @* menu context *@
+                    @if (showContextMenu && (selectedRowDiscountCodes != null || selectedRowDiscountCategory != null))
+                    {
+                        <div class="contextMenu dropdown-menu-end dropdown-menu"
+                        style="position: fixed; top: @(menuY!)px; left: @(menuX!)px; display: block;"
+                        @onclick:stopPropagation="true">
+                            <ul>
+                                <li @onclick="() => Edit(selectedRowDiscountCodes!,selectedRowDiscountCategory!)">
+                                    <a><i class="fa-solid fa-pen-to-square"></i> @L["Edit"]</a>
+                                </li>
+                                <li @onclick="() => Delete(selectedRowDiscountCodes!,selectedRowDiscountCategory!)">
+                                    <a><i class="fa-solid fa-trash-can"></i> @L["Delete"]</a>
+                                </li>
+                            </ul>
+                        </div>
+                    }
+
+                    @if (showDiscountFormAction != null)
+                    {
+                        if (showDiscountFormAction.Value.ifAdd)
+                        {
+                            <Syriana_Manager.Components.Layout.OverlayEditAddDiscount discountCode="newDiscountCode" discountCategory="newDiscountCategory" action="showDiscountFormAction.Value" OnHandel="HandleAddEditDiscount" />
+                        }
+                        else
+                        {
+                            <Syriana_Manager.Components.Layout.OverlayEditAddDiscount discountCode="editDiscountCode" discountCategory="editDiscountCategory" action="showDiscountFormAction.Value" OnHandel="HandleAddEditDiscount" />
+                        }
+                    }
+                }
+                else
+                {
+                    <div style="display:flex; justify-content:center; align-items:center; height:80vh;">
+                        <div class="alert alert-danger text-center">
+                            @L["NoPermission"]
+                        </div>
+                    </div>
+                }
+            }
+        </Authorized>
+        <NotAuthorized>
+            <Syriana_Manager.Pages.LogIn />
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
+@code {
+
+    private List<ColumnOption> columnOptions = new()
+    {
+      new("RabattTable", "RaTa", true),
+      new("KatagoryTable","KaTa", true),
+    };
+    private bool ShowColumn(string key) => columnOptions.FirstOrDefault(c => c.Key == key)?.IsVisible == true;
+    private bool HasManageDiscountsPermision = false;
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await authProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        HasManageDiscountsPermision = user.HasClaim("permission", "manageDiscounts") ||
+                             user.HasClaim("permission", "fullAccess");
+        if (HasManageDiscountsPermision)
+        {
+            // get Discount codes
+            await discountService.GetAllDiscountCodes();
+            // get Discount Categorys
+            await discountService.GetAllDiscountCategory();
+        }
+        // ParameterSet true, weil wir nutzen die funktionen hier nicht
+        IsRendered.ParametersSet = true;
+        IsRendered.Initialized = true;
+    }
+    private async Task OnColumnChanged()
+    {
+        // Immer wenn sich eine Checkbox ändert, speichern wir die Liste.
+        await localStorageService.Set("columnOptionsDiscount", columnOptions);
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // wenn die key in ColmunOptions geändert wurde dann remove was in Storage gespeichert
+            columnOptions = await localStorageService.SyncColumnOptionsAsync("columnOptionsDiscount", columnOptions, c => c.Key);
+            IsRendered.AfterRender = true;
+        }
+    }
+    private (bool ifdicountCode, bool ifAdd)? showDiscountFormAction;
+    private void OpenAddForm(bool ifDiscountCode,bool ifAdd)
+    {
+        showDiscountFormAction = (ifDiscountCode, ifAdd);
+    }
+
+    private void Edit(DiscountCodes discountCodes, DiscountCategory discountCategory)
+    {
+        if (discountCodes != null)
+        {
+            editDiscountCode = new DiscountCodes
+                {
+                    Id = discountCodes.Id,
+                    Code = discountCodes.Code,
+                    DiscountAmount = discountCodes.DiscountAmount,
+                    UsageLimit = discountCodes.UsageLimit,
+                    StartDate = discountCodes.StartDate,
+                    EndDate = discountCodes.EndDate,
+                    DiscountType = discountCodes.DiscountType,
+                    IsActive = discountCodes.IsActive,
+                };
+            OpenAddForm(true, false);
+        }
+        else if (discountCategory != null)
+        {
+            editDiscountCategory = new DiscountCategory
+                {
+                    Id = discountCategory.Id,
+                    Code = discountCategory.Code,
+                    DiscountAmount = discountCategory.DiscountAmount,
+                    UsageLimit = discountCategory.UsageLimit,
+                    StartDate = discountCategory.StartDate,
+                    EndDate = discountCategory.EndDate,
+                    DiscountType = discountCategory.DiscountType,
+                    IsActive = discountCategory.IsActive,
+                    CategoriesId = discountCategory.CategoriesId,
+                };
+            OpenAddForm(false, false);
+        }
+
+        showContextMenu = false;
+    }
+    private async Task Delete(DiscountCodes discountCodes, DiscountCategory discountCategory)
+    {
+        var resultConfirm = await js.InvokeAsync<bool>("confirm", $"Möchten Sie das Discount mit der Code {discountCodes?.Code ?? discountCategory?.Code} wirklich löschen?");
+        if (resultConfirm)
+        {
+
+            if (discountCodes != null)
+            {
+                var result = await discountService.DeleteDiscountCode(discountCodes.Id);
+                if (result.Result)
+                    StateHasChanged();
+                else
+                    await js.InvokeVoidAsync("window.alert", result.Message!);
+            }
+            else if (discountCategory != null)
+            {
+                var result = await discountService.DeleteDiscountCategory(discountCategory.Id);
+                if (result.Result)
+                    StateHasChanged();
+                else
+                    await js.InvokeVoidAsync("window.alert", result.Message!);
+
+            }
+        }
+        showContextMenu = false;
+    }
+    // select DiscountCategory
+    private DiscountCategory? selectedRowDiscountCategory;
+    // select DiscountCodes
+    private DiscountCodes? selectedRowDiscountCodes;
+    private void OnDoubleTap(DiscountCodes item,DiscountCategory item1, MouseEventArgs e)
+    {
+        /*if (_editProduct != null || IsShowAddProductForm || IsDeleting || IsShowInvoice || IsShowOrder)
+            return;*/
+
+        selectedRowDiscountCodes = item;
+        selectedRowDiscountCategory = item1;
+
+        menuX = e.ClientX;
+        menuY = e.ClientY;
+        showContextMenu = true;
+
+        StateHasChanged();
+    }
+    private void OnSelectRow(DiscountCodes item,DiscountCategory item1, MouseEventArgs e)
+    {
+        /*if (_editProduct != null || IsShowAddProductForm || IsDeleting || IsShowInvoice || IsShowOrder)
+            return;*/
+
+        if (e.Button == 2)
+        {
+            selectedRowDiscountCodes = item;
+            selectedRowDiscountCategory = item1;
+            menuX = e.ClientX;
+            menuY = e.ClientY;
+            showContextMenu = true;
+        }
+
+
+    }
+
+    // Menu recht klicken
+    private bool showContextMenu = false;
+    private double menuX;
+    private double menuY;
+    private string menuXpx => $"{menuX}px";
+    private string menuYpx => $"{menuY}px";
+    //
+    private DiscountCodes newDiscountCode = new();
+    private DiscountCategory newDiscountCategory = new();
+    private DiscountCodes editDiscountCode = new();
+    private DiscountCategory editDiscountCategory = new();
+    private void HandleAddEditDiscount(string Action)
+    {
+        showDiscountFormAction = null;
+    }
+    private void OnMainDiv()
+	{
+		// hide die Menu if sichtbar
+		showContextMenu = false;
+	}
+}

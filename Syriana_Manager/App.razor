@@ -1,0 +1,22 @@
+﻿@using Syriana_Manager.Components.Layout
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <NotAuthorized>
+                    <p role="alert">Entschuldigung, Sie haben keine Berechtigung, auf diese Seite zuzugreifen.</p>
+                </NotAuthorized>
+                <Authorizing>
+                    <p>Die Überprüfung läuft...</p>
+                </Authorizing>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <PageTitle>Nicht gefunden</PageTitle>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <p role="alert">Tut mir leid, an dieser Adresse gibt es nichts.</p>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

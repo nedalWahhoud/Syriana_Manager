@@ -1,0 +1,59 @@
+﻿/* table */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+    .table thead th {
+        position: sticky;
+        top: 79px;
+        background-color: #ffffff;
+        z-index: 2;
+        border-bottom: 2px solid #cccccc;
+    }
+    .table tbody tr td {
+        font-size: 15px;
+        vertical-align: middle;
+        text-align: center;
+        height: 120px;
+        max-width: 200px;
+        word-wrap: break-word;
+        white-space: normal;
+    }
+.productImg {
+    width: 75px;
+    height: 75px;
+    border-radius: 12px;
+}
+
+.table tbody tr.has-quantity {
+    background-color: #d4edda; 
+    border-left: 5px solid #28a745; 
+}
+
+    .table tbody tr.has-quantity td,
+    .table tbody tr.selected td {
+        background-color: transparent;
+    }
+
+
+
+@media (max-width: 768px) {
+    .table {
+        width: 100%;
+        font-size: 13px;
+        table-layout: auto;
+    }
+        .table thead th {
+            top: 70px;
+        }
+        .table tbody tr td {
+            font-size: 11px;
+            height: auto;
+            padding: 8px;
+        }
+    .productImg {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+    }
+}

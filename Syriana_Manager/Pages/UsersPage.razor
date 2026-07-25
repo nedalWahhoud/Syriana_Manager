@@ -1,0 +1,296 @@
+﻿@page "/users"
+@namespace Syriana_Manager.Components.Layout
+@inject IStringLocalizer<Syriana_Manager.Components.Layout.UsersPage> L
+<div class="mainDiv" @onclick="OnMain">
+	<AuthorizeView>
+		<Authorized Context="authContext">
+			@if (!IsRendered.Initialized || !IsRendered.ParametersSet || !IsRendered.AfterRender)
+			{
+				<Syriana_Manager.Components.Layout.Loading />
+			}
+			else
+			{
+				@if (IsHasManageUsersPermission)
+				{
+					<div class="tableContiner">
+						<div class="topTable">
+							@* choose the Columns *@
+							<div class="h-100 d-flex">
+								<button class="btn columnsB dropdown-toggle" type="button" data-bs-toggle="dropdown" />
+								<ul class="dropdown-menu p-3" style="max-height:300px; overflow-y:auto; min-width: 250px;">
+									@foreach (var col in columnOptions)
+									{
+										<li>
+											<div class="form-check form-switch">
+												<input class="form-check-input" type="checkbox" id="@col.Key" @bind="col.IsVisible" @bind:after="OnColumnChanged" />
+												<label class="form-check-label" for="@col.Key">
+													@col.Label
+												</label>
+											</div>
+										</li>
+									}
+								</ul>
+							</div>
+						</div>
+						<table class="table table-bordered table-hover userTable">
+							<thead class="table-dark">
+								<tr>
+									@if (ShowColumn("Id"))
+									{
+										<th>@L["Id"]</th>
+									}
+									@if (ShowColumn("User"))
+									{
+										<th>@L["User"]</th>
+									}
+									@if (ShowColumn("EMail"))
+									{
+										<th>@L["E-Mail"]</th>
+									}
+									@if (ShowColumn("Role"))
+									{
+										<th>@L["Role"]</th>
+									}
+									@if (ShowColumn("BirthDate"))
+									{
+										<th>@L["BirthDate"]</th>
+									}
+									@if (ShowColumn("IsGuest"))
+									{
+										<th>@L["IsGuest"]</th>
+									}
+									@if (ShowColumn("IsAktiv"))
+									{
+										<th>@L["IsActive"]</th>
+									}
+									@if (ShowColumn("SignupProvider"))
+									{
+										<th>@L["Sigupprovieder"]</th>
+									}
+									@if (ShowColumn("Created"))
+									{
+										<th>@L["Created"]</th>
+									}
+								</tr>
+							</thead>
+							<tbody>
+								@foreach (var user in authService.DownloadedUsers)
+								{
+									<tr>
+										@if (ShowColumn("Id"))
+										{
+											<td><span class="fw-bold">@user.Id</span></td>
+										}
+										@if (ShowColumn("User"))
+										{
+											<td>@user.UserName</td>
+										}
+										@if (ShowColumn("EMail"))
+										{
+											<td>@user.Email</td>
+										}
+										@if (ShowColumn("Role"))
+										{
+											@if (IsProcessing.Item1 && IsProcessing.Item2 == user.Id)
+											{
+												<div class="d-flex align-items-center justify-content-center">
+													<div class="spinner-border spinner-border-sm text-primary" role="status">
+														<span class="visually-hidden">Loading...</span>
+													</div>
+												</div>
+											}
+											else if (isEditRole == user.Id)
+											{
+												<td>
+													@* Durch Doppelklicken öffnet sich ein Dropdown-Menü. *@
+													<select @key="user.Id" class="form-select form-select-sm" @bind="updateProfile.Role" @onblur="StopEdit" @bind:after="() => SaveRole(user)" @onclick:stopPropagation="true" autofocus>
+														@foreach (var role in Enum.GetValues(typeof(UserRole)))
+														{
+															<option value="@role.ToString()!.ToLower()">@role.ToString()!.ToUpper()</option>
+														}
+													</select>
+												</td>
+											}
+											else
+											{
+												<td @ondblclick="() => StartEdit(user)" style="cursor: pointer;">
+													<span class="badge @(user.Role.ToLower() == "Admin".ToLower() ? "bg-primary" : "bg-secondary")" title="Doppeltippen zum Bearbeiten">
+														@user.Role.ToUpper()
+													</span>
+												</td>
+											}
+										}
+										@if (ShowColumn("BirthDate"))
+										{
+											<td>@user.BirthDate</td>
+										}
+										@if (ShowColumn("IsGuest"))
+										{
+											<td>@(user.IsGuest ? "Ja" : "Nein")</td>
+										}
+										@if (ShowColumn("IsAktiv"))
+										{
+											<td class="text-center">
+												<span class="badge @(user.IsAktiv ? "bg-success" : "bg-warning text-dark")">
+													@(user.IsAktiv ? "Ja" : "Nein")
+												</span>
+											</td>
+										}
+										@if (ShowColumn("SignupProvider"))
+										{
+											<td>@user.SignupProvider</td>
+										}
+										@if (ShowColumn("Created"))
+										{
+											<td>@user.CreatedAt</td>
+										}
+									</tr>
+								}
+							</tbody>
+						</table>
+						<div class="d-flex justify-content-center mt-3">
+							<button @onclick="OnMoreLoadUsers" class="btn btn-success"
+									disabled="@(authService.GetItemsUsers.AllItemsLoaded || (IsProcessing.Item1&& IsProcessing.Item2 == -1))">
+								@if (IsProcessing.Item1 && IsProcessing.Item2 == -1)
+								{
+									<span class="spinner-border spinner-border-sm"
+										  role="status"
+										  aria-hidden="true"></span>
+								}
+								else if (authService.GetItemsUsers.AllItemsLoaded)
+								{
+									<span>@L["AllLoaded"]</span>
+								}
+								else
+								{
+									<span>@L["LoadMore"]</span>
+								}
+							</button>
+						</div>
+					</div>
+				
+				}
+				else
+				{
+					<div style="display:flex; justify-content:center; align-items:center; height:80vh;">
+						<div class="alert alert-danger text-center">
+							@L["NoPermission"]
+						</div>
+					</div>
+				}
+			}
+		</Authorized>
+		<NotAuthorized>
+			<Syriana_Manager.Pages.LogIn />
+		</NotAuthorized>
+	</AuthorizeView>
+</div>
+@code {
+	// Column
+	private List<ColumnOption> columnOptions = new()
+	{
+	  new("Id", "Id", false),
+	  new("Kunde","User", true),
+	  new("E-Mail","EMail", false),
+	  new("Rolle","Role",  true),
+	  new("Geburtsdatum","BirthDate", false),
+	  new("Gast","IsGuest", true),
+	  new("Aktiv","IsAktiv", true),
+	  new("Anmeldeanbieter","SignupProvider", true),
+	  new("Erstellt","Created", true),
+	};
+	private bool ShowColumn(string key) => columnOptions.FirstOrDefault(c => c.Key == key)?.IsVisible == true;
+	private bool IsHasManageUsersPermission = false;
+	protected override async Task OnInitializedAsync()
+	{
+		var authState = await authProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		IsHasManageUsersPermission = user.HasClaim("permission", "manageUsers") || user.HasClaim("permission", "fullAccess");
+		if (IsHasManageUsersPermission)
+		{
+			await authService.GetAllUsers();
+
+			// initzialize GetItems 
+			authService.GetItemsUsers = new GetItems<Users> { CurrentPage = 1, PageSize = 10 };
+		}
+		
+		// afterRender und ParameterSet true, weil wir nutzen die funktionen hier nicht
+		IsRendered.AfterRender = IsRendered.ParametersSet = true;
+		IsRendered.Initialized = true;
+	}
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			// wenn die key in ColmunOptions geändert wurde dann remove was in Storage gespeichert
+			columnOptions = await localStorageService.SyncColumnOptionsAsync("columnOptionsUser", columnOptions, c => c.Key);
+			IsRendered.AfterRender = true;
+		}
+	}
+
+	private (bool, int) IsProcessing = (false, 0);
+	private async Task OnMoreLoadUsers()
+	{
+		IsProcessing = (true,-1);
+
+		// Load more transactions
+		await authService.GetAllUsers();
+
+		IsProcessing = (false, 0);
+	}
+	private async Task OnColumnChanged()
+	{
+		// Immer wenn sich eine Checkbox ändert, speichern wir die Liste.
+		await localStorageService.Set("columnOptionsUser", columnOptions);
+
+	}
+
+	// edit user
+	private int isEditRole = 0;
+	private void StartEdit(Users user)
+	{
+		isEditRole = user.Id;
+		updateProfile.UserId = user.Id;
+		updateProfile.Role = user.Role;
+	}
+
+	private void StopEdit()
+	{
+		isEditRole = 0;
+	}
+
+	private UpdateProfile updateProfile = new UpdateProfile();
+	private async Task SaveRole(Users user)
+	{
+		if (user.Id > 0)
+		{
+			IsProcessing = (true, user.Id);
+			updateProfile.UpdateType = UpdateTypeEnum.Role;
+			var result = await authService.UpdateProfileAsync(updateProfile);
+			if (!result.Result)
+			{
+				_ = js.InvokeVoidAsync("window.alert", result.Message);
+			}
+			else
+			{
+				user.Role = updateProfile.Role;
+			}
+		}
+		else
+		{
+			_ = js.InvokeVoidAsync("window.alert", "Benutzer-ID ist ungültig.");
+		}
+		isEditRole = 0;
+		updateProfile = new UpdateProfile();
+		IsProcessing = (true, 0);
+	}
+
+	private void OnMain()
+	{
+		if (isEditRole != 0)
+		{
+			isEditRole = 0;
+			updateProfile = new UpdateProfile();
+		}
+	}
+}

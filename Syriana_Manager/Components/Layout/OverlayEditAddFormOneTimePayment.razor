@@ -1,0 +1,415 @@
+﻿@inherits ProjectComponentBase
+@inject IStringLocalizer<Syriana_Manager.Components.Layout.OverlayEditAddFormOneTimePayment> L
+<div class="overlay">
+	<div class="standardOverlayForm">
+		@if (!isAddedSuccess)
+		{
+			@if (Action != "UnexpectedPayment" || UnexpectedPaymentToAdd)
+			{
+				if (UnexpectedPaymentToAdd && UnexpectedPaymentoneTimePayment != null)
+				{
+					oneTimePayment = UnexpectedPaymentoneTimePayment;
+					Action = "add";
+				}
+				<EditForm Model="@oneTimePayment" OnValidSubmit="Save">
+					<DataAnnotationsValidator />
+					<div class="overlayField">
+						<InputSelect class="form-control" @bind-Value="oneTimePayment.CustomerId" disabled>
+							<option value="@oneTimePayment.CustomerId">@(oneTimePayment.Customer != null ? (IsArabic ? oneTimePayment.Customer.Name_ar : oneTimePayment.Customer.Name_de) : "Fehler")</option>
+						</InputSelect>
+						<ValidationMessage For="@(() => oneTimePayment.CustomerId)" />
+					</div>
+					<div class="overlayField">
+						<InputSelect class="form-control" @bind-Value="oneTimePayment.DistributionLineId" disabled>
+							<option value="@oneTimePayment.DistributionLineId">@(oneTimePayment.DistributionLine != null ? oneTimePayment.DistributionLine.LineName : "Fehler")</option>
+						</InputSelect>
+						<ValidationMessage For="@(() => oneTimePayment.DistributionLineId)" />
+					</div>
+					<div class="overlayField">
+						<div class="input-group">
+							<span class="input-group-text customLatIcon">@L["Amount"]</span>
+							<InputNumber TValue="double" class="form-control" @bind-Value="oneTimePayment.TotalAmount" @onfocus="@(e => SelectAllContent())" disabled="@(!(Action == "editTotalAmount" || Action == "add"))" />
+							<span class="input-group-text customLatIcon">€</span>
+						</div>
+						<ValidationMessage For="@(() => oneTimePayment.TotalAmount)" />
+					</div>
+					<div class="overlayField">
+						<div class="input-group">
+							<span class="input-group-text customLatIcon"><i class="bi bi-calendar-event @(IsArabic ? "ms-2" : "me-2")"></i> @L["Date"]</span>
+							<InputDate id="PickupDate" class="form-control" @bind-Value="oneTimePayment.PickupDate" disabled="@(!(Action == "add"))" />
+						</div>
+						<ValidationMessage For="@(() => oneTimePayment.PickupDate)" />
+					</div>
+					@if (Action == "updateStatus" || (Action == "add" && (oneTimePayment.Status == OneTimePaymentStatus.TeilweiseInkassiert || oneTimePayment.Status == OneTimePaymentStatus.Ueberzahlt)))
+					{
+						<div class="overlayField">
+							<InputSelect class="form-control" @bind-Value="oneTimePayment.Status" disabled>
+								<option value="@oneTimePayment.Status">@L[oneTimePayment.Status.ToString()]</option>
+							</InputSelect>
+							<ValidationMessage For="@(() => oneTimePayment.Status)" />
+						</div>
+						@if (oneTimePayment.Status != OneTimePaymentStatus.Verschoben)
+						{
+							<div class="overlayField">
+								<div class="input-group">
+									<span class="input-group-text customLatIcon">T-Betrag</span>
+									<InputNumber TValue="double" class="form-control" @bind-Value="oneTimePayment.AmountCollected" @onfocus="@(e => SelectAllContent())" />
+									<span class="input-group-text customLatIcon">€</span>
+								</div>
+								<ValidationMessage For="@(() => oneTimePayment.AmountCollected)" />
+							</div>
+						}
+					}
+
+					@if (Action == "add")
+					{
+						<div class="overlayField  w-100">
+							<div class="dropdown  w-100">
+								<button class="@oneTimePaymentsService.GetStatusClass(oneTimePayment.Status,true) w-100 py-2"
+								type="button" 
+								id="statusDropdown-@oneTimePayment.Id" 
+								data-bs-toggle="dropdown"
+								data-bs-boundary="viewport"
+								aria-expanded="false"
+								style="border: none;">
+									<span class="@(IsArabic ? "ms-2" : "me-2")">@L[oneTimePayment.Status.ToString()]</span>
+								</button>
+								<ul class="dropdown-menu" aria-labelledby="statusDropdown-@oneTimePayment.Id">
+									@foreach (OneTimePaymentStatus newStatus in Enum.GetValues(typeof(OneTimePaymentStatus)))
+									{
+										<li>
+											<button class="dropdown-item" type="button" @onclick="() => UpdateStatus(oneTimePayment, newStatus)">
+												@L[newStatus.ToString()]
+											</button>
+										</li>
+									}
+								</ul>
+							</div>
+						</div>
+					}
+
+					<div class="overlayField">
+						<InputText class="form-control" @bind-Value="oneTimePayment.Notes" placeholder="@L["Note"]" />
+						<ValidationMessage For="@(() => oneTimePayment.Notes)" />
+					</div>
+					<div class="mt-3">
+						<button class="btn btn-primary me-2" disabled="@IsProcessing">
+							@if (IsProcessing)
+							{
+								<span class="spinner-border spinner-border-sm"
+								role="status"
+								aria-hidden="true"></span>
+							}
+							else
+							{
+								<span>@L["Save"]</span>
+							}
+						</button>
+						<button class="btn btn-secondary" @onclick="Cancel">@L["Cancel"]</button>
+					</div>
+				</EditForm>
+			}
+			else
+			{
+				<div class="UnexpectedPaymentDiv">
+					<div class="dropdownListsDiv">
+						<select id="distributionLineSelect"
+						class="w-full border border-gray-300 bg-white px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+						@bind="selectedDistributionLineId"
+						@bind:after="AfterDistributionLineChanged">
+							<option value="0" disabled selected class="text-gray-400">@L["SelectLine"]</option>
+							@foreach (var distributionLine in distributionLinesService.DownloadedDistributionLines)
+							{
+								<option value="@distributionLine.Id">@distributionLine.LineName</option>
+							}
+						</select>
+						@if (selectedDistributionLineId == 0)
+						{
+							<div class="text-sm text-red-500 mt-1">@L["PleaseSelectLine"]</div>
+						}
+						else
+						{
+							if (IsProcessingUnexpectedPayment)
+							{
+								<div class="text-sm text-blue-500 mt-1 text-primary">
+									Lade Kunden...
+									<span class="spinner-border spinner-border-sm"
+									role="status"
+									aria-hidden="true"></span>
+								</div>
+							}
+							else if (customersOfSelectedLine == null)
+							{
+								<div class="text-sm text-yellow-500 mt-1">@L["NoCustomersFound"]</div>
+							}
+							else 
+							{
+								<div class="searchBox">
+
+									<input type="text" 
+									class="w-full border border-gray-300 bg-white px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+									placeholder="@L["SearchCustomer"]"
+									@oninput="OnSearchCustomer" />
+
+									<ul class="searchDropdown">
+										@foreach (var customer in filteredCustomers)
+										{
+											if (customer != null)
+											{
+												<li @onclick="async () => { selectedCustomerId = customer.Id; await AfterCustomerhanged(); }" class="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded">
+													@(IsArabic ? customer.Name_ar : @customer.Name_de)
+												</li>
+											}
+										}
+									</ul>
+								</div>
+							}
+						}
+					</div>
+
+					<button class="btn btn-secondary" @onclick="Cancel">@L["Cancel"]</button>
+				</div>
+			}
+		}
+		else
+		{
+			<div class="p-4">
+				<div class="mb-3 text-success">
+					<i class="fa-solid fa-circle-check" style="font-size: 3rem;"></i>
+				</div>
+				<h4 class="mb-3" style="color: #2e7d32;">@L["SuccessfullySaved"]</h4>
+
+				<div class="card text-start mx-auto mb-4" style="max-width: 450px; border-radius: 8px; background-color: #f8f9fa; border-left: 5px solid #2e7d32;">
+					<div class="card-body p-3">
+						<h6 class="card-title border-bottom pb-2 mb-3 text-secondary fw-bold">
+							<i class="fa-solid fa-file-invoice"></i> @L["Details"]
+						</h6>
+
+						<div class="mb-2 d-flex justify-content-between">
+							<span class="text-muted">@L["Customer"]:</span>
+							<span class="fw-bold">
+								@(oneTimePayment.Customer != null ? $"{(IsArabic ? oneTimePayment.Customer.Name_ar : oneTimePayment.Customer.Name_de)}" : "---")
+							</span>
+						</div>
+
+						<div class="mb-2 d-flex justify-content-between">
+							<span class="text-muted">@L["Line"]:</span>
+							<span class="fw-bold">@(oneTimePayment.DistributionLine?.LineName ?? "---")</span>
+						</div>
+
+						<div class="mb-2 d-flex justify-content-between">
+							<span class="text-muted">@L["TotalAmount"]:</span>
+							<span class="fw-bold text-primary">@oneTimePayment.TotalAmount €</span>
+						</div>
+
+						<div class="mb-2 d-flex justify-content-between">
+							<span class="text-muted">@L["Status"]:</span>
+							<span class="@oneTimePaymentsService.GetStatusClass(oneTimePayment.Status,false)" style="border: none;">
+								@L[oneTimePayment.Status.ToString()]
+							</span>
+						</div>
+
+						@if (!string.IsNullOrEmpty(oneTimePayment.Notes))
+						{
+							<div class="mt-2 border-top pt-2">
+								<small class="text-muted d-block mb-1">@L["Note"]:</small>
+								<div class="p-2 bg-white rounded border small text-wrap text-break">
+									@oneTimePayment.Notes
+								</div>
+							</div>
+						}
+					</div>
+				</div>
+
+				<div class="mt-4 d-flex flex-column gap-2">
+					<button class="btn btn-success px-5" @onclick="CloseOverlayAfterSuccess">@L["Ok"]</button>
+					@if (!UnexpectedPaymentToAdd)
+					{
+						<NavLink class="btn btn-secondary px-5" href="/oneTimePayments">@L["ToPaymentPage"]</NavLink>
+					}
+				</div>
+
+			</div>
+		}
+	</div>
+</div>
+@code {
+
+	[Parameter]
+	public OneTimePayment oneTimePayment { get; set; } = new();
+	[Parameter]
+	public string Action { get; set; } = string.Empty;
+	[Parameter]
+	public EventCallback<(string action,OneTimePayment? oneTimePayment)> OnHandel { get; set; }
+
+	private bool IsProcessing = false;
+	private bool isAddedSuccess = false;	
+
+	protected async override Task OnInitializedAsync()
+	{
+		if (Action == "UnexpectedPayment")
+		{
+			if (distributionLinesService.DownloadedDistributionLines == null || distributionLinesService.DownloadedDistributionLines.Count == 0)
+			{
+				await distributionLinesService.GetAllDistributionLinesAsync();
+			}
+		}
+	}
+	private async Task Save()
+	{
+		IsProcessing = true;
+		TrimItems();
+		if (Action == "add")
+		{
+			// Validierung der Konsistenz des Betrags vor dem Hinzufügen
+			ValidationResult result1 = oneTimePaymentsService.ValidateAmountConsistencyAsync(oneTimePayment);
+			if(!result1.Result)
+			{
+				await js.InvokeVoidAsync("alert", result1.Message);
+				IsProcessing = false;
+				return;
+			}
+
+			var result = await oneTimePaymentsService.Add(oneTimePayment);
+			if (result != null && result.Result)
+			{
+				isAddedSuccess = true;
+				oneTimePayment.Id = result?.NewId ?? 0; // die Id der neu erstellten Einmalzahlung zuweisen
+			}
+			else if (result != null && !result.Result)
+				await js.InvokeVoidAsync("alert", result.Message);
+			else
+				await js.InvokeVoidAsync("alert", "Fehler beim Speichern der Einmalzahlung. Bitte überprüfen Sie Ihre Eingaben und versuchen Sie es erneut.");
+		}
+		else if (Action == "updateStatus")
+		{
+			var originalPayment = oneTimePaymentsService.GetOneTimePaymentByIdLocal(oneTimePayment.Id) ?? new();
+			bool isEdited = oneTimePaymentsService.IsEdited(originalPayment, oneTimePayment);
+			if (!isEdited)
+			{
+				Cancel();
+				IsProcessing = false;
+				return;
+			}
+			// Validierung der Konsistenz des Betrags vor dem Hinzufügen
+			ValidationResult result1 = oneTimePaymentsService.ValidateAmountConsistencyAsync(oneTimePayment);
+			if (!result1.Result)
+			{
+				await js.InvokeVoidAsync("alert", result1.Message);
+				IsProcessing = false;
+				return;
+			}
+		}
+		if (Action == "updateStatus" || Action == "editTotalAmount")
+		{
+			var result = await oneTimePaymentsService.UpdateOneTimePaymentAsync(oneTimePayment);
+			if (result.Result)
+			{
+				await OnHandel.InvokeAsync((Action, oneTimePayment));
+			}
+			else
+			{
+				await js.InvokeVoidAsync("alert", result.Message);
+			}
+		}
+		IsProcessing = false;
+	}
+	private void Cancel()
+	{
+		OnHandel.InvokeAsync(("cancel",null));
+	}
+	private async Task CloseOverlayAfterSuccess()
+	{
+		isAddedSuccess = false;
+
+		if (Action == "add" && UnexpectedPaymentToAdd)
+			Action = "UnexpectedPayment";
+
+		await OnHandel.InvokeAsync((Action, oneTimePayment));
+	}
+	private async Task SelectAllContent()
+	{
+		try
+		{
+			// um sicherzustellen, dass der Browser den Fokussierungsprozess abgeschlossen hat
+			await Task.Delay(10);
+			await js.InvokeVoidAsync("eval", "document.querySelector('.form-control:focus').select()");
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Fehler beim Auswählen des Inhalts: {ex.Message}");
+		}
+	}
+	private void UpdateStatus(OneTimePayment payment, OneTimePaymentStatus newStatus)
+	{
+		if (payment == null) return;
+
+		payment.Status = newStatus;
+		if (newStatus != OneTimePaymentStatus.Verschoben && newStatus != OneTimePaymentStatus.Offen)
+			payment.AmountCollected = payment.TotalAmount;
+	}
+	// UnexpectedPayment
+	private int selectedDistributionLineId = 0;
+	private List<Customers>? customersOfSelectedLine;
+	private bool IsProcessingUnexpectedPayment = false;
+	private async Task AfterDistributionLineChanged()
+	{
+		IsProcessingUnexpectedPayment = true;
+		var result = await customersService.GetAllCustomersByLineId(selectedDistributionLineId);
+		if (result != null && result.Result)
+		{
+			customersOfSelectedLine = customersService.DownloadedCustomers.Where(c => c.DistributionLineId == selectedDistributionLineId).ToList();
+			StateHasChanged();
+		}
+		else
+		{
+			customersOfSelectedLine = null!;
+		}
+		IsProcessingUnexpectedPayment = false;
+	}
+	private int selectedCustomerId = 0;
+	private bool UnexpectedPaymentToAdd = false;
+	private OneTimePayment UnexpectedPaymentoneTimePayment = null!;
+	private async Task AfterCustomerhanged()
+	{
+		UnexpectedPaymentoneTimePayment = new OneTimePayment
+			{
+				CustomerId = selectedCustomerId,
+				Customer = customersService.GetCustomerByIdLocal(selectedCustomerId) 
+					?? await customersService.GetCustomerByIdAsync(selectedCustomerId),
+				DistributionLineId = selectedDistributionLineId,
+				DistributionLine = distributionLinesService.DownloadedDistributionLines.FirstOrDefault(dl => dl.Id == selectedDistributionLineId)
+						?? await distributionLinesService.GetDistributionLineByIdAsync(selectedDistributionLineId),
+					PickupDate = DateTime.Now
+			};
+		UnexpectedPaymentToAdd = true;
+		StateHasChanged();
+	}
+	private List<Customers> filteredCustomers = new();
+	private void OnSearchCustomer(ChangeEventArgs e)
+	{
+		string searchTerm = e.Value?.ToString()?.Trim().ToLower() ?? string.Empty;
+		if (customersOfSelectedLine != null)
+		{
+			if (string.IsNullOrEmpty(searchTerm))
+			{
+				filteredCustomers = new();
+			}
+			else
+			{
+				filteredCustomers = customersOfSelectedLine
+					.Where(c => c.DistributionLineId == selectedDistributionLineId &&
+								(c.Name_de.ToLower().Contains(searchTerm) || c.Name_ar.ToLower().Contains(searchTerm)))
+					.ToList();
+			}
+			StateHasChanged();
+		}
+	}
+	private void TrimItems()
+	{
+		if (oneTimePayment != null)
+		{
+			oneTimePayment.Notes = oneTimePayment.Notes?.Trim()!;
+		}
+	}
+}

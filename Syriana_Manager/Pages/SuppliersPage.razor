@@ -1,0 +1,354 @@
+﻿@page "/suppliers"
+@namespace Syriana_Manager.Components.Layout
+@inject IStringLocalizer<Syriana_Manager.Components.Layout.SuppliersPage> L
+<div class="mainDiv" @onclick="OnMainDiv">
+	<AuthorizeView>
+		<Authorized Context="authContext">
+			@if (!IsRendered.Initialized || !IsRendered.ParametersSet || !IsRendered.AfterRender)
+			{
+				<Syriana_Manager.Components.Layout.Loading />
+			}
+			else
+			{
+				@if (isHasManageSuppliersPermission)
+				{
+					<div tabindex="0" id="scrollContainer" class="tableContiner">
+						<div class="topTable">
+							<div class="buttonsDiv">
+								@* add neu Product *@
+								<button class="btn addPlusB" @onclick="ShowAddFormAsync" disabled="@(IsProcessing)" title="Add neues Liefranten">+</button>
+								@* choose the Columns *@
+								<div class="h-100 d-flex">
+									<button class="btn columnsB dropdown-toggle" type="button" data-bs-toggle="dropdown" />
+									<ul class="dropdown-menu p-3" style="max-height:300px; overflow-y:auto; min-width: 250px;">
+										@foreach (var col in columnOptions)
+										{
+											<li>
+												<div class="form-check form-switch">
+													<input class="form-check-input" type="checkbox" id="@col.Key" @bind="col.IsVisible" @bind:after="OnColumnChanged" />
+													<label class="form-check-label" for="@col.Key">
+														@col.Label
+													</label>
+												</div>
+											</li>
+										}
+									</ul>
+								</div>
+							</div>
+						</div>
+						<table class="table table-bordered table-hover">
+							<thead>
+								<tr>
+									@if (ShowColumn("Id"))
+									{
+										<th>@L["Id"]</th>
+									}
+									@if (ShowColumn("Name"))
+									{
+										<th>@L["Name"]</th>
+									}
+									@if (ShowColumn("Street"))
+									{
+										<th>@L["Street"]</th>
+									}
+									@if (ShowColumn("HNumber"))
+									{
+										<th>@L["HouseNumber"]</th>
+									}
+									@if (ShowColumn("PostalCode"))
+									{
+										<th>@L["PostalCode"]</th>
+									}
+									@if (ShowColumn("City"))
+									{
+										<th>@L["City"]</th>
+									}
+									@if (ShowColumn("Country"))
+									{
+										<th>@L["Country"]</th>
+									}
+									@if (ShowColumn("Phone"))
+									{
+										<th>@L["Tel."]</th>
+									}
+									@if (ShowColumn("Email"))
+									{
+										<th>@L["EMail"]</th>
+									}
+									@if (ShowColumn("Website"))
+									{
+										<th>@L["Website"]</th>
+									}
+								</tr>
+							</thead>
+							<tbody>
+								@* table *@
+								@{
+									var dataSource = suppliersService.DownloadedSuppliers;
+									<Virtualize Items="dataSource" Context="supplier" OverscanCount="10">
+										<tr @key="supplier.Id" @oncontextmenu:preventDefault="true"
+											@oncontextmenu="@(e => OnSelectRow(supplier, e))"
+											@onclick="(e) => OnSelectRow(supplier, e)"
+											@ondblclick="(e) => OnDoubleTap(supplier, e)"
+											class="@(selectedSupplier?.Id == supplier.Id ? "selected" : "")">
+											@if (ShowColumn("Id"))
+											{
+												<td>@supplier.Id</td>
+											}
+											@if (ShowColumn("Name"))
+											{
+												<td>@(IsArabic ? supplier.Name_Ar : supplier.Name)</td>
+											}
+											@if (ShowColumn("Street"))
+											{
+												<td>@supplier.Street</td>
+											}
+											@if (ShowColumn("HNumber"))
+											{
+												<td>@supplier.HNumber</td>
+											}
+											@if (ShowColumn("PostalCode"))
+											{
+												<td>@supplier.PostalCode</td>
+											}
+											@if (ShowColumn("City"))
+											{
+												<td>@supplier.City</td>
+											}
+											@if (ShowColumn("Country"))
+											{
+												<td>@supplier.Country</td>
+											}
+											@if (ShowColumn("Phone"))
+											{
+												<td>@supplier.Phone</td>
+											}
+											@if (ShowColumn("Email"))
+											{
+												<td>@supplier.Email</td>
+											}
+											@if (ShowColumn("Website"))
+											{
+												<td><a href="@supplier.Website" target="_blank">@supplier.Website</a></td>
+											}
+										</tr>
+									</Virtualize>
+								}
+								@if (!IsProcessing && dataSource.Count == 0)
+								{
+									<tr id="loadingMessage">
+										<td colspan="13" class="text-center py-4 alert-warning font-weight-bold" style="color: #007bff;">
+											<i class="bi bi-exclamation-circle mr-2"></i> @L["NoSuppliers"]
+										</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+					@* menu context *@
+					@if (showContextMenu && selectedSupplier != null)
+					{
+						<div class="contextMenu dropdown-menu-end dropdown-menu"
+							 style="position: fixed; top: @(menuY)px; left: @(menuX)px; display: block;"
+							 @onclick:stopPropagation="true">
+							<ul>
+								<li @onclick="() => PlaceOrder(selectedSupplier)">
+									<a><i class="fa-solid fa-cart-plus"></i> @L["PlaceOrder"]</a>
+								</li>
+								<li @onclick="() => Edit(selectedSupplier)">
+									<a><i class="fa-solid fa-pen-to-square"></i> @L["Edit"]</a>
+								</li>
+								<li @onclick="() => Delete(selectedSupplier)">
+									<a><i class="fa-solid fa-trash-can"></i> @L["Delete"]</a>
+								</li>
+							</ul>
+						</div>
+					}
+
+					@if (IsAdding)
+					{
+						<Syriana_Manager.Components.Layout.OverlayEditAddSupplier supplier="new Suppliers()" Action="Add" OnHandel="Handle" />
+					}
+					else if (IsEditing && EditingSupplier != null)
+					{
+						<Syriana_Manager.Components.Layout.OverlayEditAddSupplier supplier="EditingSupplier" Action="Edit" OnHandel="Handle" />
+					}
+				}
+				else
+				{
+					<div style="display:flex; justify-content:center; align-items:center; height:80vh;">
+						<div class="alert alert-danger text-center">
+							@L["NoPermission"]
+						</div>
+					</div>
+				}
+			}
+		</Authorized>
+		<NotAuthorized>
+			<Syriana_Manager.Pages.LogIn />
+		</NotAuthorized>
+	</AuthorizeView>
+</div>
+@code {
+	// Column
+	private List<ColumnOption> columnOptions = new()
+	{
+	  new("Id", "Id", false),
+	  new("Name","Name", true),
+	  new("Straße","Street", false),
+	  new("Hausnummer","HNumber",  true),
+	  new("PLZ","PostalCode", false),
+	  new("Stadt","City", true),
+	  new("Land","Country", true),
+	  new("Tel.","Phone", true),
+	  new("E-Mail","Email", true),
+	  new("Webseite","Website", true),
+	};
+	private bool ShowColumn(string key) => columnOptions.FirstOrDefault(c => c.Key == key)?.IsVisible == true;
+	private async Task OnColumnChanged()
+	{
+		// Immer wenn sich eine Checkbox ändert, speichern wir die Liste.
+		await localStorageService.Set("columnOptionsSuppliers", columnOptions);
+	}
+	private bool IsProcessing = false;
+	private bool isHasManageSuppliersPermission = false;
+	protected override async Task OnInitializedAsync()
+	{
+		var authState = await authProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+
+		isHasManageSuppliersPermission = user.HasClaim("permission", "manageSuppliers") ||
+								user.HasClaim("permission", "fullAccess");
+		if (isHasManageSuppliersPermission)
+		{
+			// get Discount codes
+			await suppliersService.GetAllSuppliers();
+		}
+
+		// afterRender und ParameterSet true, weil wir nutzen die funktionen hier nicht
+		IsRendered.ParametersSet = true;
+		IsRendered.Initialized = true;
+	}
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			// wenn die key in ColmunOptions geändert wurde dann remove was in Storage gespeichert
+			columnOptions = await localStorageService.SyncColumnOptionsAsync("columnOptionsSuppliers", columnOptions, c => c.Key);
+			IsRendered.AfterRender = true;
+			StateHasChanged();
+		}
+	}
+	private bool IsEditing = false;
+	private bool IsAdding = false;
+	private Suppliers EditingSupplier = null!;
+	private void ShowAddFormAsync()
+	{
+		IsAdding = true;
+	}
+	private void Handle(string action)
+	{
+		if (action == "Add")
+		{
+			IsAdding = false;
+		}
+		else if (action == "Edit")
+		{
+			IsEditing = false;
+			EditingSupplier = null!;
+		}
+		else
+		{
+			IsAdding = false;
+			IsEditing = false;
+			EditingSupplier = null!;
+		}
+	}
+	private Suppliers? selectedSupplier;
+	// Menu recht klicken
+	private bool showContextMenu = false;
+	private double menuX;
+	private double menuY;
+	private string menuXpx => $"{menuX}px";
+	private string menuYpx => $"{menuY}px";
+	private void OnDoubleTap(Suppliers supplier, MouseEventArgs e)
+	{
+		//selectedProduct = supplier;
+		selectedSupplier = supplier;
+
+		menuX = e.ClientX;
+		menuY = e.ClientY;
+		showContextMenu = true;
+
+		StateHasChanged();
+	}
+	private void OnSelectRow(Suppliers supplier, MouseEventArgs e)
+	{
+		if (e.Button == 2)
+		{
+			//selectedProduct = supplier;
+			menuX = e.ClientX;
+			menuY = e.ClientY;
+			showContextMenu = true;
+		}
+
+		selectedSupplier = supplier;
+	}
+
+	private void Edit(Suppliers supplier)
+	{
+		showContextMenu = false;
+		EditingSupplier = new Suppliers()
+			{
+				Id = supplier.Id,
+				Name = supplier.Name,
+				Street = supplier.Street,
+				HNumber = supplier.HNumber,
+				PostalCode = supplier.PostalCode,
+				City = supplier.City,
+				Country = supplier.Country,
+				Phone = supplier.Phone,
+				Email = supplier.Email,
+				Website = supplier.Website
+			};
+		IsEditing = true;
+	}
+	private async Task Delete(Suppliers supplier)
+	{
+		showContextMenu = false;
+		if (supplier == null || supplier.Id <= 0)
+		{
+			await js.InvokeVoidAsync("alert", "Ungültiger Lieferant.");
+			return;
+		}
+
+		var resultConfirm = await js.InvokeAsync<bool>("confirm", $"Sind Sie sicher, dass Sie den Lieferanten '{supplier.Name}' löschen möchten?");
+		if (!resultConfirm)
+		{
+			return;
+		}
+		//
+		IsProcessing = true;
+		var result = await suppliersService.DeleteSupplier(supplier.Id);
+		if (!result.Result)
+		{
+			await js.InvokeVoidAsync("alert", result.Message);
+		}
+		IsProcessing = false;
+	}
+	private void PlaceOrder(Suppliers supplier)
+	{
+		if (supplier == null || supplier.Id <= 0)
+		{
+			js.InvokeVoidAsync("alert", "Ungültiger Lieferant.");
+			return;
+		}
+
+		navigationManager.NavigateTo($"/supplierorder/{supplier.Id}");
+	}
+	private void OnMainDiv()
+	{
+		// hide die Menu if sichtbar
+		showContextMenu = false;
+	}
+}

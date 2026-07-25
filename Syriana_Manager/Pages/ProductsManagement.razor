@@ -1,0 +1,1197 @@
+﻿@page "/"
+@implements IDisposable
+@namespace Syriana_Manager.Components.Layout
+@inject IStringLocalizer<Syriana_Manager.Components.Layout.ProductsManagement> L
+<div class="mainDiv" @onclick="OnMainDiv">
+	<AuthorizeView>
+		<Authorized Context="authContext">
+			@if (!IsRendered.Initialized || !IsRendered.ParametersSet || !IsRendered.AfterRender)
+			{
+				<Syriana_Manager.Components.Layout.Loading />
+			}
+			else
+			{
+				@if (IsHasManageProductsPermission)
+				{
+					@* table *@
+					<div tabindex="0" id="scrollContainer" class="tableContiner">
+						<div class="topTable">
+							@* add neu Product *@
+							<button class="btn addPlusB" @onclick="ShowAddProductFormAsync" disabled="@(IsLoadingMessage)" title="Add neues Produkt">+</button>
+							@* choose the Columns *@
+							<div class="h-100 d-flex align-items-center">
+								<button class="btn columnsB dropdown-toggle" type="button" data-bs-toggle="dropdown" />
+								<ul class="dropdown-menu p-3" style="max-height:300px; overflow-y:auto; min-width: 250px;">
+									@foreach (var col in columnOptions)
+									{
+										<li>
+											<div class="form-check form-switch">
+												<input class="form-check-input"
+												type="checkbox"
+												id="@col.Key"
+												@bind="col.IsVisible"
+												@bind:after="OnColumnChanged" />
+												<label class="form-check-label" for="@col.Key">
+													@col.Label
+												</label>
+											</div>
+										</li>
+									}
+								</ul>
+							</div>
+							@* Rechnung *@
+							<button class="btn @(IsShowInvoice ? "btn-secondary" : "btn-success") InvoiceB" @onclick="@(IsShowInvoice ? CancelOrderForm : ShowOrderForm)" disabled="@(IsLoadingMessage)">
+								@(!IsShowInvoice ? "R" : "A")
+							</button>
+							@* filter *@
+							<div class="d-flex flex-column gap-1 ms-auto">
+								@* Lagerstand Filter  *@
+								<select id="stockFilter" class="filterDropdownList" @bind="selectedValuesFilter" @bind:after="OnFilterChanged" disabled="@(IsLoadingMessage
+                                        || productService.DownloadedProduct.Count == 0
+                                        || categoryService.DownloadedCategories.Count == 0)">
+									<option value="0">@L["All"]</option>
+									<option value="1">@L["LowStock"]</option>
+									<option value="2">@L["OnSale"]</option>
+								</select>
+								@* category filter *@
+								<select class="filterDropdownList" @bind="selectedCategoryId" @bind:after="OnCategoryChanged" @onfocus="OnCategoryOpened" disabled="@(IsLoadingMessage || productService.DownloadedProduct.Count == 0)">
+									<option value="0">@L["Category"]</option>
+									@foreach (var category in categoryService.DownloadedCategories)
+									{
+										<option value="@category.Id">@(IsArabic ? category.Name_ar : category.Name_de)</option>
+									}
+								</select>
+							</div>
+						</div>
+						<table class="table text-center align-middle">
+							<thead>
+								<tr>
+									@if (ShowColumn("Index"))
+									{
+										<th>@L["Index"]</th>
+									}
+									@if (ShowColumn("Id"))
+									{
+										<th>@L["Id"]</th>
+									}
+									@if (ShowColumn("Name"))
+									{
+										<th>@L["Name"]</th>
+									}
+									@if (ShowColumn("Description"))
+									{
+										<th>@L["Description"]</th>
+									}
+									@if (ShowColumn("Category"))
+									{
+										<th>@L["Category"]</th>
+									}
+									@if (ShowColumn("Barcode"))
+									{
+										<th>@L["Barcode"]</th>
+									}
+									@if (ShowColumn("Quantity"))
+									{
+										<th>@L["Quantity"]</th>
+									}
+									@if (ShowColumn("PurchasePrice"))
+									{
+										<th>@L["PurchasePrice"]</th>
+									}
+									@if (ShowColumn("SellePrice"))
+									{
+										<th>@L["SellingPrice"]</th>
+									}
+									@if (ShowColumn("MinimumStock"))
+									{
+										<th>@L["MinimumStock"]</th>
+									}
+									@if (ShowColumn("ExpDate"))
+									{
+										<th>@L["ExpDate"]</th>
+									}
+									@if (ShowColumn("PackagingUnit"))
+									{
+										<th>@L["PackagingUnit"]</th>
+									}
+									@if (ShowColumn("ItemsPerPackage"))
+									{
+										<th>@L["ItemsPerPackage"]</th>
+									}
+									@if (ShowColumn("Supplier"))
+									{
+										<th>@L["Supplier"]</th>
+									}
+									@if (ShowColumn("TaxRate"))
+									{
+										<th>@L["TaxRate"]</th>
+									}
+									@if (ShowColumn("Group"))
+									{
+										<th>@L["Group"]</th>
+									}
+									@if (ShowColumn("IsShippable"))
+									{
+										<th>@L["IsShippable"]</th>
+									}
+									@if (ShowColumn("DiscountedPrice"))
+									{
+										<th>@L["OnSale"]</th>
+									}
+									@if (ShowColumn("Username"))
+									{
+										<th>@L["UserName"]</th>
+									}
+									@if (ShowColumn("Img"))
+									{
+										<th>@L["Img"]</th>
+									}
+									<th class="@(IsShowInvoice ? "" : "hidden" )"><button class="btn InvoiceGeB" @onclick="OnOrderGenerate">Order erstellen</button></th>
+								</tr>
+							</thead>
+							<tbody>
+								@* Loading message *@
+								<tr id="loadingMessage" class="@(!IsLoadingMessage ? "hidden" : "showLoading")">
+									<td colspan="11" class="loadingTd">
+										Lädt...
+									</td>
+								</tr>
+								@* table *@
+								@{
+									var dataSource = filterP ?? productService.DownloadedProduct;
+									<Virtualize Items="dataSource" Context="product" OverscanCount="10">
+										<tr @key="product.Id"
+										@oncontextmenu:preventDefault="true"
+										@oncontextmenu="@(e => OnSelectRow(product, e))"
+										@onclick="(e) => OnSelectRow(product, e)"
+										@ondblclick="(e) => OnDoubleTap(product, e)"
+										class="@(selectedRow?.Id == product.Id ? "selected" : "")">
+											@if (ShowColumn("Index"))
+											{
+												<td>@(dataSource.IndexOf(product) + 1)</td>
+											}
+											@if (ShowColumn("Id"))
+											{
+												<td>@product.Id</td>
+											}
+											@if (ShowColumn("Name"))
+											{
+												<td>@(IsArabic ? product.Name_ar : product.Name_de)</td>
+											}
+											@if (ShowColumn("Description"))
+											{
+												<td>@(IsArabic ? product.Description_ar : product.Description_de)</td>
+											}
+											@if (ShowColumn("Category"))
+											{
+												<td>@product.Category!.Name_de</td>
+											}
+											@if (ShowColumn("Barcode"))
+											{
+												<td>@product.Barcode</td>
+											}
+											@if (ShowColumn("Quantity"))
+											{
+												<td class="@(product.MinimumStock >= product.Quantity ? "IsMinimumStock" : "")">@product.Quantity</td>
+											}
+											@if (ShowColumn("PurchasePrice"))
+											{
+												<td>@product.PurchasePrice.ToString("C", new System.Globalization.CultureInfo("de-DE"))</td>
+											}
+											@if (ShowColumn("SellePrice"))
+											{
+												<td>@product.SalePrice.ToString("C", new System.Globalization.CultureInfo("de-DE"))</td>
+											}
+											@if (ShowColumn("MinimumStock"))
+											{
+												<td>@product.MinimumStock</td>
+											}
+											@if (ShowColumn("ExpDate"))
+											{
+												@* check exp date *@
+												var expDate = product.EXPDate;
+												string backgroundcolor = ""; // Default color
+												string color = "";
+
+												if (expDate < DateTime.Today)
+												{
+													backgroundcolor = "red"; // Abgelaufen
+													color = "white";
+												}
+												else if (expDate <= DateTime.Today.AddMonths(1))
+												{
+													backgroundcolor = "orange"; // Weniger als ein Monat übrig
+													color = "white";
+												}
+
+												<td style="background-color:@backgroundcolor!; color:@color;">@(expDate!.ToString("dd.MM.yyyy")!)</td>
+											}
+											@if (ShowColumn("PackagingUnit"))
+											{
+												<td>@L[product.PackagingUnit.ToString()]</td>
+											}
+											@if (ShowColumn("ItemsPerPackage"))
+											{
+												<td>@product.ItemsPerPackage</td>
+											}
+											@if (ShowColumn("Supplier"))
+											{
+												<td>@string.Join(", ", product.Suppliers.Select(s => s.Name))</td>
+											}
+											@if (ShowColumn("TaxRate"))
+											{
+												<td>@((product.TaxRate?.Rate.ToString("0") + "%") ?? "")</td>
+											}
+											@if (ShowColumn("Group"))
+											{
+												<td>@(product.ProductGroup?.GroupName_de ?? "")</td>
+											}
+											@if (ShowColumn("IsShippable"))
+											{
+												<td>@product.IsShippable</td>
+											}
+											@if (ShowColumn("DiscountedPrice"))
+											{
+												<td>@(product.ProductDiscount == null ? 0 : product.ProductDiscount.DiscountedPrice)</td>
+											}
+											@if (ShowColumn("Username"))
+											{
+												<td>@(product.User?.UserName ?? "")</td>
+											}
+											@if (ShowColumn("Img"))
+											{
+												<td><img src="@productImagesService.GetProductImageUrl(product.ProductImages?.FirstOrDefault(img => img.IsMain)!)" class="productImg" /></td>
+											}
+											@* Rechnung *@
+											<td class="@(authContext.User.IsInRole("admin") && IsShowInvoice ? "AddDecresaseCard" : "hidden")">
+												<Syriana_Manager.Components.Layout.AddDecresaseCard ProductId="@product.CartItem.ProductId" OnQuantityChanged="HandleQuantityChanged" />
+											</td>
+										</tr>
+									</Virtualize>
+
+									@if (!IsLoadingMessage && dataSource.Count == 0)
+									{
+										<tr id="loadingMessage">
+											<td colspan="13" class="text-center py-4 alert-warning font-weight-bold" style="color: #007bff;">
+												<i class="bi bi-exclamation-circle mr-2"></i> @L["NoFound"]
+											</td>
+										</tr>
+									}
+								}
+							</tbody>
+						</table>
+					</div>
+
+					@* menu context *@
+					@if (showContextMenu && selectedProduct != null)
+					{
+						<div class="contextMenu dropdown-menu-end dropdown-menu"
+						style="position: fixed; top: @(menuY)px; left: @(menuX)px; display: block;"
+						@onclick:stopPropagation="true">
+							<ul>
+								<li @onclick="() => EditProduct(selectedProduct)">
+									<a><i class="fa-solid fa-pen-to-square"></i> @L["Edit"]</a>
+								</li>
+								<li @onclick="() => DeleteProduct(selectedProduct)">
+									<a><i class="fa-solid fa-trash-can"></i> @L["Delete"]</a>
+								</li>
+								<li @onclick="OpenScanner">
+									<a><i class="fa-solid fa-barcode"></i>@L["EnterBarcode"]</a>
+								</li>
+							</ul>
+						</div>
+					}
+					@* Add Product form *@
+					@if (IsShowAddProductForm)
+					{
+						<Syriana_Manager.Components.Layout.OverlayEditForm Action="Add" GetProducts="newProduct" user="user" OnHandel="HandleEditProduct" />
+					}
+					else if (_editProduct != null)
+					{
+						<Syriana_Manager.Components.Layout.OverlayEditForm Action="Edit" GetProducts="_editProduct" user="user" OnHandel="HandleEditProduct" />
+					}
+					@* order erstellen *@
+					@if (IsShowOrder)
+					{
+						<div class="overlay">
+							<div class="standardOverlayForm">
+								@* address *@
+								<h3>@L["DeliveryAddress"]: </h3>
+								<EditForm Model="@newAddress">
+									<DataAnnotationsValidator />
+									<div class="form-group">
+										<label>@L["FirstName"]</label>
+										<InputText class="form-control" @bind-Value="newAddress.FirstName" />
+										<ValidationMessage style="color:red;" For="@(() => newAddress.FirstName)" />
+									</div>
+									<div class="form-group">
+										<label>@L["LastName"]</label>
+										<InputText class="form-control" @bind-Value="newAddress.LastName" />
+										<ValidationMessage style="color:red;" For="@(() => newAddress.LastName)" />
+									</div>
+									<div class="form-group">
+										<label>@L["Tel."]</label>
+										<InputText class="form-control" @bind-Value="newAddress.Phone" />
+										<ValidationMessage style="color:red;" For="@(() => newAddress.Phone)" />
+									</div>
+									<div class="form-group">
+										<label>@L["Street"]</label>
+										<InputText class="form-control" @bind-Value="newAddress.Street" />
+										<ValidationMessage style="color:red;" For="@(() => newAddress.Street)" />
+									</div>
+									<div class="form-group">
+										<label>@L["PostalCode"]</label>
+										<InputText class="form-control" @bind-Value="newAddress.ZipCode" />
+										<ValidationMessage style="color:red;" For="@(() => newAddress.ZipCode)" />
+									</div>
+									<div class="form-group">
+										<label>@L["City"]</label>
+										<InputText class="form-control" @bind-Value="newAddress.City" />
+										<ValidationMessage style="color:red;" For="@(() => newAddress.City)" />
+									</div>
+									<div class="form-group">
+										<label>@L["Country"]</label>
+										<InputText class="form-control" @bind-Value="newAddress.Country" readonly />
+									</div>
+								</EditForm>
+								@* Discount Code *@
+								<div class="discountClass">
+									<label>Hast du Rabatt Code?</label>
+									<div class="input-group d-flex gap-2 mb-1">
+										<InputText class="form-control" @bind-Value="discountCode.Code" />
+										<button type="button" class="btn btn-primary" @onclick="OnCode">
+											@if (IsDiscountCodeLoading)
+											{
+												<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+											}
+											else
+											{
+												<span>Code eingeben</span>
+											}
+										</button>
+									</div>
+									@{
+										string message = null!;
+										if (discountCode.Message != null && !string.IsNullOrEmpty(discountCode.Message))
+										{
+											message = discountCode.Message;
+										}
+										else if (discountCategory.Message != null && !string.IsNullOrEmpty(discountCategory.Message))
+										{
+											message = discountCategory.Message;
+										}
+
+										double DiscountPercentageText = 0;
+										char? valueSymbol = null;
+										if (discountCode.DiscountAmount != 0)
+										{
+											DiscountPercentageText = discountCode.DiscountAmount;
+											valueSymbol = discountCode.DiscountType == DiscountType.Percentage ? '%' : '€';
+										}
+										else if (discountCategory.DiscountAmount != 0)
+										{
+											DiscountPercentageText = discountCategory.DiscountAmount;
+											valueSymbol = discountCategory.DiscountType == DiscountType.Percentage ? '%' : '€';
+										}
+										else
+										{
+											DiscountPercentageText = 0;
+										}
+
+										<label class="mt-2 text-success">Rabattprozentsatz: @DiscountPercentageText @valueSymbol</label>
+										<label class="mt-2 text-danger">@message</label>
+									}
+								</div>
+								<div class="placeOrder">
+									Artikel: @cartService.GetTotalQuantity()
+									<span>
+										@if (discountCode != null && discountCode.Id > 0)
+										{
+											var result = GetFinalPriceWithDiscount();
+											<span class="text-success">Es wird bei deinem Einkauf gespart @result.discountValue.ToString("C", new System.Globalization.CultureInfo("de-DE")) </span>
+										}
+										else if (discountCategory != null && discountCategory.Id > 0 && discountCategory.CategoriesId > 0)
+										{
+											var result = GetFinalPriceWithDiscountCategory();
+											<span class="text-success">Es wird bei deinem Einkauf gespart @result.discountValue.ToString("C", new System.Globalization.CultureInfo("de-DE")) </span>
+										}
+										else
+										{
+											GetFinalPrice();
+										}
+									</span>
+									@{
+										double totalPrice = 0;
+										if (order.ShippingProviders != null && order.ShippingProviderId > 0)
+										{
+											<span>Versandkosten: @order.ShippingProviders.PublicShippingCost.ToString("C", new System.Globalization.CultureInfo("de-DE"))</span>
+											totalPrice = order.TotalPrice + order.ShippingProviders.PublicShippingCost;
+										}
+										else
+											totalPrice = order.TotalPrice;
+									}
+									<span><strong>Gesamtpreis:</strong> @totalPrice.ToString("C", new System.Globalization.CultureInfo("de-DE"))</span>
+									<span>Die Preise beinhalten MwSt.</span>
+								</div>
+								<div class="OrderClassB">
+									<button type="button" class="btn InvoiceGenerateB" @onclick="OnInvoiceGenerate">Rechnung erstellen</button>
+									<button type="button" class="btn InvoiceGeneratCancelB" @onclick="OnOrderCancel">Abbrechnen</button>
+								</div>
+							</div>
+						</div>
+					}
+					@* Rechnung *@
+					@if (IsInvoiceVisible)
+					{
+						<Syriana_Manager.Components.Layout.InvoiceLayout invoice="invoice" OnHandel="HandleInvoice" />
+					}
+					@if (ShowScanner)
+					{
+						<div class="scanner-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+							<div id="reader" style="width: 300px; background:white; border-radius:10px; overflow:hidden;"></div>
+							<button class="btn btn-danger mt-3" @onclick="CloseScanner">@L["Cancel"]</button>
+						</div>
+					}
+				}
+				else if (!IsHasManageProductsPermission)
+				{
+					<div style="display:flex; justify-content:center; align-items:center; height:80vh;">
+						<div class="alert alert-danger text-center">
+							@L["NoPermission"]
+						</div>
+					</div>
+				}
+			}
+		</Authorized>
+		<NotAuthorized>
+			<Syriana_Manager.Pages.LogIn />
+		</NotAuthorized>
+	</AuthorizeView>
+</div>
+@code{
+
+	// Taks
+	Task taskCatyrories = Task.CompletedTask;
+	Task taskSuppliers = Task.CompletedTask;
+	Task taskProductGroups = Task.CompletedTask;
+	Task taskTaxRates = Task.CompletedTask;
+	private bool IsHasManageProductsPermission = false;
+	private bool IsLoadingMessage = false;
+	private Users? user;
+	private GetItems<Products> getItems = new();
+	// show Colmuns
+	private List<ColumnOption> columnOptions = new()
+    {
+	  new("Index", "Index", false),
+	  new("Id", "Id", false),
+	  new("Name", "Name", true),
+	  new("Beschreibung", "Description", true),
+	  new("Kategorie", "Category", true),
+	  new("Barcode", "Barcode", false),
+	  new("Menge", "Quantity", true),
+	  new("Kaufpreis", "PurchasePrice", true),
+	  new("Verkaufspreis", "SellePrice", true),
+	  new("Mindestbestand", "MinimumStock", false),
+	  new("Ablaufdatum", "ExpDate", false),
+	  new("Verpackungseinheit","PackagingUnit",false),
+	  new("Artikels pro Verpackung","ItemsPerPackage",false),
+	  new("Lieferant", "Supplier", true),
+	  new("Steuersatz", "TaxRate", false),
+	  new("Gruppe", "Group", false),
+	  new("Versandfähig", "IsShippable", false),
+	  new("Im Angebot", "DiscountedPrice", false),
+	  new("Benutzername", "Username", false),
+	  new("Img", "Img", true),
+    };
+	private bool ShowColumn(string key) => columnOptions.FirstOrDefault(c => c.Key == key)?.IsVisible == true;
+	protected override async Task OnInitializedAsync()
+	{
+		var authState = await authProvider.GetAuthenticationStateAsync();
+		var user1 = authState.User;
+		IsHasManageProductsPermission = user1.HasClaim("permission", "manageProducts") || user1.HasClaim("permission", "fullAccess");
+		// get aktulle user
+		user = await authService.GetUser();
+		// get benötigte listen
+		taskSuppliers = suppliersService.GetAllSuppliers();
+		taskProductGroups = productGroupService.GetAllGroupProductsAsync();
+		taskTaxRates = taxRateService.GetAllTaxRates();
+		taskCatyrories = categoryService.GetAllCategoriesAsync();
+
+		// get gespeicherte CategoryId
+		selectedCategoryId = await localStorageService.Get<int>("selectedCategoryId");
+
+		IsRendered.Initialized = true;
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (IsHasManageProductsPermission)
+		{
+			// wenn die category filter gesetzt in latzt Sitzung wurde dann filtern nach lest gespeicherte category
+			if (selectedCategoryId > 0)
+			{
+				getItems = new() { Filter = new() { Id = selectedCategoryId, Type = GetItemFilterType.Category }, Includes = ProductIncludes.Category | ProductIncludes.ProductImages | ProductIncludes.Suppliers | ProductIncludes.ProductDiscount };
+				if (!taskCatyrories.IsCompleted)
+					await taskCatyrories;
+			}
+			else
+				getItems = new();
+
+			// initialzieren die Filtereinstellung für die Produkte und die Produkte leeren, damit die neuen Produkte geladen werden können
+			productService.DownloadedProduct.Clear();
+			// erste Produkte laden
+			await loadInBackground();
+		}
+		IsRendered.ParametersSet = true;
+	}
+
+	private async Task OnColumnChanged()
+	{
+		// Immer wenn sich eine Checkbox ändert, speichern wir die Liste.
+		await localStorageService.Set("columnOptions", columnOptions);
+	}
+	// OnAfterRenderAsync
+	private DotNetObjectReference<ProductsManagement>? objRef;
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			// Das Donnet-Objekt für die Verwendung in JavaScript abrufen
+			objRef = DotNetObjectReference.Create(this);
+			// wenn die key in ColmunOptions geändert wurde dann remove was in Storage gespeichert
+			columnOptions = await localStorageService.SyncColumnOptionsAsync("columnOptions", columnOptions, c => c.Key);
+
+			IsRendered.AfterRender = true;
+		}
+		try
+		{
+			await js.InvokeVoidAsync("checkScrollEnd", objRef, "scrollContainer");
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error initializing scroll event: {ex.Message}");
+		}
+	}
+	// load products
+	private async Task<GetItems<Products>> loadInBackground()
+	{
+		if (IsLoadingMessage == true)
+			return new();
+
+		IsLoadingMessage = true;
+
+		var moreProducts = await productService.GetProducts(getItems);
+
+		// initialize CartItem for each product
+		foreach (var product in moreProducts.Items)
+		{
+			product.InitializeCartItem(cartService.GetQuantityOfProduct(product.Id));
+		}
+
+		if (selectedCategoryId > 0)
+		{
+			// wenn im Filtermodus, dann die neuen Produkte auch zum Filter hinzufügen
+			if (filterP != null)
+				filterP.AddRange(moreProducts.Items);
+			else
+				filterP = new List<Products>(moreProducts.Items);
+		}
+		else if (selectedValuesFilter > 0)
+		{
+			// wenn im Lagerstand Filtermodus, dann die neuen Produkte auch zum Filter hinzufügen
+			if (filterP != null)
+				filterP.AddRange(moreProducts.Items);
+			else
+				filterP = new List<Products>(moreProducts.Items);
+		}
+		// die items reinigen, damit nicht mit rquset nach server geschickt werden
+		getItems.AllItemsLoaded = moreProducts.AllItemsLoaded;
+		getItems.CurrentPage = moreProducts.CurrentPage;
+		// hide the loading message
+		IsLoadingMessage = false;
+
+		await InvokeAsync(StateHasChanged);
+
+		return moreProducts;
+	}
+	// Scroll
+	[JSInvokable]
+	public async Task OnScrollEnd()
+	{
+		await loadInBackground();
+	}
+	// Menu recht klicken
+	private bool showContextMenu = false;
+	private double menuX;
+	private double menuY;
+	private string menuXpx => $"{menuX}px";
+	private string menuYpx => $"{menuY}px";
+	private Products? selectedProduct;
+
+	// Select
+	private Products? selectedRow;
+	private void OnDoubleTap(Products product, MouseEventArgs e)
+	{
+		if (_editProduct != null || IsShowAddProductForm || IsDeleting || IsShowInvoice || IsShowOrder)
+			return;
+
+		selectedProduct = product;
+		selectedRow = product;
+
+		menuX = e.ClientX;
+		menuY = e.ClientY;
+		showContextMenu = true;
+
+		StateHasChanged();
+	}
+	private void OnSelectRow(Products product, MouseEventArgs e)
+	{
+		if (_editProduct != null || IsShowAddProductForm || IsDeleting || IsShowInvoice || IsShowOrder)
+			return;
+
+		if (e.Button == 2)
+		{
+			selectedProduct = product;
+			menuX = e.ClientX;
+			menuY = e.ClientY;
+			showContextMenu = true;
+		}
+
+		selectedRow = product;
+	}
+	// Add Product
+	private bool IsShowAddProductForm = false;
+	private async void ShowAddProductFormAsync()
+	{
+		// cancel all other processes
+		_editProduct = null!;
+
+		// get the categories and manufacturers and taxrates
+		if (!taskCatyrories.IsCompleted)
+			await taskCatyrories;
+		if (!taskSuppliers.IsCompleted)
+			await taskSuppliers;
+		if (!taskProductGroups.IsCompleted)
+			await taskProductGroups;
+		if (!taskTaxRates.IsCompleted)
+			await taskTaxRates;
+
+		IsShowAddProductForm = !IsShowAddProductForm;
+		StateHasChanged();
+	}
+	private void HideAddProductForm()
+	{
+		IsShowAddProductForm = false;
+	}
+	// Delete Product
+	private bool IsDeleting = false;
+	private async Task DeleteProduct(Products SelectedProduct)
+	{
+		if (SelectedProduct == null || IsDeleting)
+		{
+			await js.InvokeVoidAsync("alert", "Please select a product");
+			return;
+		}
+		// hide die context menu
+		showContextMenu = false;
+		// set deleting state
+		IsDeleting = true;
+		var resultConfirm = await js.InvokeAsync<bool>("confirm", $"Möchten Sie das Produkt mit der ID {SelectedProduct.Id} wirklich löschen?");
+		if (resultConfirm)
+		{
+
+			var result = await productService.DeleteProductAsync(SelectedProduct.Id);
+			if (result.Result)
+			{
+				productService.DownloadedProduct.RemoveAll(p => p.Id == SelectedProduct.Id);
+				// wenn in filter mode
+				if (filterP != null && filterP.Count > 0)
+				{
+					filterP.RemoveAll(p => p.Id == SelectedProduct.Id);
+				}
+				selectedRow = null;
+				await js.InvokeVoidAsync("alert", result.Message ?? "Message ist Null");
+			}
+			else
+			{
+				await js.InvokeVoidAsync("alert", result.Message ?? "Message ist Null");
+			}
+		}
+		else
+		{
+			// User cancelled the deletion
+		}
+
+		// reset deleting state
+		IsDeleting = false;
+	}
+	// Edit Product
+	private Products _editProduct = null!;
+	private Products newProduct = new Products();
+	private async Task EditProduct(Products SelectedProduct)
+	{
+		if (SelectedProduct == null)
+		{
+			await js.InvokeVoidAsync("alert", "Please select a product");
+			return;
+		}
+		// hide die context menu
+		showContextMenu = false;
+		// erlaubt keine Änderung von Produkten, wenn Kassenbon oder Rechnung angezeigt wird
+		if (!IsShowInvoice && SelectedProduct != null)
+		{
+			// cancel all other processes
+			IsShowAddProductForm = false;
+
+			// new products create to so that both (products and editproduct) do not reference the same instance.
+			_editProduct = new Products
+				{
+					Id = SelectedProduct.Id,
+					Name_de = SelectedProduct.Name_de,
+					Description_de = SelectedProduct.Description_de,
+					Name_ar = SelectedProduct.Name_ar,
+					Description_ar = SelectedProduct.Description_ar,
+					CategoryId = SelectedProduct.CategoryId,
+					//	Category = doubleSelectProduct.Category,
+					Quantity = SelectedProduct.Quantity,
+					PurchasePrice = SelectedProduct.PurchasePrice,
+					SalePrice = SelectedProduct.SalePrice,
+					MinimumStock = SelectedProduct.MinimumStock,
+					EXPDate = SelectedProduct.EXPDate,
+					PackagingUnit = SelectedProduct.PackagingUnit,
+					ItemsPerPackage = SelectedProduct.ItemsPerPackage,
+					SelectedSupplierIds = SelectedProduct.SelectedSupplierIds ?? new(),
+					Suppliers = SelectedProduct.Suppliers,
+					//Manufacturer = doubleSelectProduct.Manufacturer,
+					TaxRateId = SelectedProduct.TaxRateId,
+					ProductGroupID = SelectedProduct.ProductGroupID,
+					IsShippable = SelectedProduct.IsShippable,
+					//DiscountedPrice = SelectedProduct.DiscountedPrice,
+					ProductDiscount = (selectedProduct?.ProductDiscount == null)
+			                        ? new ()
+			                        : new ()
+		             {
+				          Id = selectedProduct.ProductDiscount.Id,
+				          ProductsId = selectedProduct.ProductDiscount.ProductsId,
+				          DiscountedPrice = selectedProduct.ProductDiscount.DiscountedPrice,
+				          StartDate = selectedProduct.ProductDiscount.StartDate,
+				          EndDate = selectedProduct.ProductDiscount.EndDate
+			         },
+					//Image = SelectedProduct.Image,
+					ProductImages = SelectedProduct.ProductImages?
+		             .Select(img => new ProductImages
+		             {
+	 		           Id = img.Id,
+			           ProductId = img.ProductId,
+			           ImageUrl = img.ImageUrl,
+			           IsMain = img.IsMain,
+			           ImageBytes = img.ImageBytes,
+			           LastModified = img.LastModified
+		             })
+		             .ToList() ?? new List<ProductImages>(),
+					UserId = user?.Id ?? 0,
+					CartItem = SelectedProduct.CartItem
+				};
+		}
+	}
+	// Overlay Form Handel
+	private void HandleEditProduct((Products product, string Action) data)
+	{
+		if (data.Action == "Edit")
+		{
+			// edit if in Filter mode
+			if (data.product != null)
+			{
+				if (filterP != null && filterP.Count > 0)
+				{
+					int filterIndex = filterP.FindIndex(p => p.Id == data.product.Id);
+					if (filterIndex >= 0)
+					{
+						filterP[filterIndex] = data.product; // Update the product in the filtered list
+					}
+				}
+				data.product = null!;
+			}
+			// Hide the edit form
+			_editProduct = null!;
+		}
+		else if (data.Action == "Add")
+		{
+			// add if in Filter mode
+			if (data.product != null)
+			{
+				if (filterP != null && filterP.Count > 0)
+				{
+					// Add the new product to the filtered list
+					filterP.Insert(0, data.product);
+				}
+			}
+
+			// Hide the add form
+			IsShowAddProductForm = false;
+			newProduct = new();
+		}
+		else
+		{
+			IsShowAddProductForm = false;
+			newProduct = new();
+			_editProduct = null!;
+		}
+	}
+	// Search
+	private List<Products> filterP = null!;
+	// filter nach category
+	private async Task OnCategoryOpened()
+	{
+		if(!taskCatyrories.IsCompleted)
+			await taskCatyrories;
+	}
+	private int selectedCategoryId = 0;
+	private async Task OnCategoryChanged()
+	{
+		// reset values filter
+		selectedValuesFilter = 0;
+		filterP = null!;
+		if (selectedCategoryId == 0)
+		{
+			// if selectedId is 0, clear the filter
+			filterP = null!;
+			// reset die Getitem 
+			getItems = new();
+
+			await loadInBackground();
+		}
+		else
+		{
+			// Legen Sie den Filter für die Kategorie-ID fest, um die Produkte anhand der Kategorie-ID zu erhalten.
+			getItems = new() { Filter = new() { Id = selectedCategoryId, Type = GetItemFilterType.Category }, Includes = ProductIncludes.Category | ProductIncludes.ProductImages | ProductIncludes.Suppliers | ProductIncludes.ProductDiscount };
+			var moreProducts = await loadInBackground();
+
+			// get the products by categoryId local, after downloading from server
+			filterP = moreProducts.Items;
+		}
+
+		// save the selected category id in local storage
+		await localStorageService.Set("selectedCategoryId", selectedCategoryId);
+		StateHasChanged();
+	}
+	// filter nach Lagerbestand
+	private int selectedValuesFilter = 0;
+	private async Task OnFilterChanged()
+	{
+		// reset category filter
+		selectedCategoryId = 0;
+		filterP = null!;
+
+		if (selectedValuesFilter == 1)
+		{
+			// Legen Sie den Filter für die Kategorie-ID fest, um die Produkte anhand der Kategorie-ID zu erhalten.
+			getItems = new() { Filter = new() { Id = 0, Type = GetItemFilterType.LowStock }, Includes = ProductIncludes.Category | ProductIncludes.ProductImages | ProductIncludes.Suppliers | ProductIncludes.ProductDiscount };
+			var moreProducts = await loadInBackground();
+
+			filterP = moreProducts.Items;
+		}
+		else if (selectedValuesFilter == 2)
+		{
+			// Legen Sie den Filter für die Kategorie-ID fest, um die Produkte anhand der Kategorie-ID zu erhalten.
+			getItems = new() { Filter = new() { Id = 0, Type = GetItemFilterType.OnOffer }, Includes = ProductIncludes.Category | ProductIncludes.ProductImages | ProductIncludes.Suppliers | ProductIncludes.ProductDiscount };
+			var moreProducts = await loadInBackground();
+
+			filterP = moreProducts.Items;
+		}
+		else
+		{
+			filterP = null!;
+			// reset die Getitem
+			getItems = new();
+		}
+		StateHasChanged();
+	}
+	// Invoice
+	private bool IsShowInvoice = false;
+	private bool IsShowOrder = false;
+	private Invoice invoice = null!;
+	private bool IsInvoiceVisible = false;
+	private Address newAddress = new();
+	private Order order = new();
+	private DiscountCodes discountCode = new();
+	private DiscountCategory discountCategory = new();
+	private bool IsDiscountCodeLoading = false;
+	private void ShowOrderForm()
+	{
+		OrderClear();
+		// then show the invoice form
+		IsShowInvoice = true;
+		// close other form
+		_editProduct = null!;
+		IsShowAddProductForm = false;
+	}
+	private void CancelOrderForm()
+	{
+		OrderClear();
+		IsShowInvoice = false;
+	}
+	private async Task OnOrderGenerate()
+	{
+		if (cartService.CartItems.Count == 0)
+		{
+			await js.InvokeVoidAsync("alert", "Bitte legen Sie Produkte in den Warenkorb, bevor Sie eine Bestellung aufgeben.");
+			return;
+		}
+
+		// show the invoice form
+		IsShowOrder = true;
+	}
+	private async Task OnCode()
+	{
+		IsDiscountCodeLoading = true;
+		var result = await discountService.CheckDiscountCode(discountCode.Code);
+		if (result.validationResult.Result == true && result.discountCodes != null)
+		{
+			discountCode = result.discountCodes;
+			discountCode.Message = null!;
+			// discountcode category message empty if has content
+			discountCategory.Message = null!;
+		}
+		else
+		{
+			// if discount code not valid, try to discount code of Category
+			discountCategory.Code = discountCode.Code;
+			// reset discount code
+			discountCode = new();
+			// check discount category code
+			var result1 = await discountService.CheckDiscountCategory(discountCategory.Code);
+			if (result1.validationResult.Result == true && result1.discountCategory != null)
+			{
+				discountCategory = result1.discountCategory;
+
+				// check if the order has items in the category of the discount
+				bool hasCategoryItems = cartService.CartItems.Any(item => item.Product.CategoryId == discountCategory.CategoriesId);
+				if (hasCategoryItems)
+					discountCategory.Message = null!;
+				else
+				{
+					discountCategory = new();
+					discountCategory.Message = "Die Bestellung enthält keinen Artikel, dessen Kategorie mit der Rabattcode-Kategorie übereinstimmt.";
+				}
+				// discountcode message empty if has content
+				discountCode.Message = null!;
+			}
+			else
+			{
+				discountCategory = new();
+				discountCategory.Message = result1.validationResult.Message!;
+			}
+		}
+		IsDiscountCodeLoading = false;
+	}
+	private void HandleQuantityChanged()
+	{
+		StateHasChanged();
+	}
+	private (double discountValue, double finalPrice) GetFinalPriceWithDiscount()
+	{
+		if (discountCode == null || discountCode.Id == 0)
+		{
+			return (0, cartService.GetTotalPrice());
+		}
+		double discountValue = 0;
+		double totalPrice = cartService.GetTotalPrice();
+		if (discountCode.DiscountType == DiscountType.Percentage)
+			discountValue = (totalPrice * discountCode?.DiscountAmount / 100.0 ?? 0);
+		else
+			discountValue = discountCode?.DiscountAmount ?? 0;
+
+		discountValue = Math.Min(discountValue, totalPrice);
+
+		double finalPrice = totalPrice - discountValue;
+
+		order.DiscountCodeId = discountCode!.Id;
+		order.TotalPrice = finalPrice;
+
+		return (discountValue, finalPrice);
+	}
+	private (double discountValue, double finalPrice) GetFinalPriceWithDiscountCategory()
+	{
+		if (discountCategory == null || discountCategory.Id == 0)
+		{
+			return (0, cartService.GetTotalPrice());
+		}
+		// get total price of category items
+		double categoryitemsPrice = 0;
+		foreach (var item in cartService.CartItems)
+		{
+			if (item.Product.CategoryId == discountCategory.CategoriesId)
+			{
+				categoryitemsPrice += item.Product.SalePrice * item.Quantity;
+			}
+		}
+
+		double categoryDiscountValue = 0;
+		double totalPrice = cartService.GetTotalPrice();
+		if (discountCategory.DiscountType == DiscountType.Percentage)
+			categoryDiscountValue = categoryitemsPrice * discountCategory.DiscountAmount / 100.0;
+		else
+			categoryDiscountValue = discountCategory.DiscountAmount;
+
+
+		categoryDiscountValue = Math.Min(categoryDiscountValue, categoryitemsPrice);
+		// final price with discount of category
+		double finalPrice = totalPrice - categoryDiscountValue;
+
+		order.DiscountCategoryId = discountCategory.Id;
+		order.TotalPrice = finalPrice;
+
+		return (categoryDiscountValue, finalPrice);
+	}
+	private void GetFinalPrice()
+	{
+		order.TotalPrice = cartService.GetTotalPrice();
+	}
+	private void OnOrderCancel()
+	{
+		// hide the order form
+		IsShowOrder = false;
+	}
+	private void OrderClear( )
+	{
+		cartService.ClearCart();
+		newAddress = new();
+		discountCategory = new();
+		discountCode = new();
+	}
+	private async Task OnInvoiceGenerate()
+	{
+		// oder
+		Order createOrder = new Order()
+			{
+				StatusId = 1, // in database 1 = Order Pending
+				OrderItems = cartService.CartItems.Select(item => new OrderItems
+				{
+					ProductId = item.ProductId,
+					Quantity = item.Quantity,
+					UnitPrice = item.Product?.SalePrice ?? 0,
+					CategoryId = item.Product?.CategoryId ?? 0
+				}).ToList(),
+				TotalPrice = order.TotalPrice,
+				OrderDate = DateTime.Now,
+				UserId = user?.Id ?? 0,
+				DiscountCodeId = order.DiscountCodeId ?? null,
+				DiscountCode = discountCode.Id > 0 ? discountCode : null,
+				DiscountCategoryId = order.DiscountCategoryId ?? null,
+				DiscountCategory = discountCategory.Id > 0 ? discountCategory : null,
+				ShippingProviderId = order.ShippingProviderId ?? null,
+				Address = newAddress,
+				IsUserCreated = false
+			};
+
+		// get the products for the order items
+		foreach (var item in createOrder.OrderItems)
+		{
+			item.Product = productService.GetProductByIdLocal(item.ProductId) ?? await productService.GetProductByIdAsync(item.ProductId);
+			if (item.Product != null && item.Product.TaxRate == null)
+				item.Product.TaxRate = taxRateService.GetTasRateLocal(item.Product.TaxRateId) ?? await taxRateService.GetTaxRateByIdAsync(item.Product.TaxRateId);
+		}
+
+		// add the discount code to the order
+		if (order.DiscountCodeId != null && order.DiscountCodeId > 0)
+		{
+			order.DiscountCode = discountCode;
+		}
+		else if (order.DiscountCategoryId != null && order.DiscountCategoryId > 0)
+		{
+			order.DiscountCategory = discountCategory;
+		}
+
+		invoice = new Invoice
+			{
+				InvoceeNumber = $"RE-{DateTime.Now:yyyyMMdd}{Random.Shared.Next(1000, 9999)}",
+				CurrentOrder = createOrder,
+			};
+
+		IsInvoiceVisible = true;
+		IsShowOrder = false;
+	}
+	private void HandleInvoice(string action)
+	{
+		invoice = null!;
+		if (action == "close")
+		{
+			
+		}
+		else if(action == "save")
+		{
+			IsInvoiceVisible = false;
+		    IsShowInvoice = false;
+			cartService.ClearCart();
+		}
+	}
+	// barcode scanning
+	private bool ShowScanner = false;
+	private async Task OpenScanner()
+	{
+		ShowScanner = true;
+		StateHasChanged(); // Wir bitten Blizzard, zuerst das "Reder"-Div zu zeichnen.
+
+		await Task.Delay(100); // Eine kurze Verzögerung, um sicherzustellen, dass der Browser das Element gezeichnet hat.
+		try
+		{
+			// JavaScript aufrufen und Kamera starten
+			await js.InvokeVoidAsync("startLiveScanner", DotNetObjectReference.Create(this));
+		}
+		catch(Exception ex)
+		{
+			await js.InvokeVoidAsync("alert", ex.Message);
+		}
+	}
+	[JSInvokable]
+	public async Task OnBarcodeScanned(string code)
+	{
+		// Diese Funktion wird unmittelbar nach dem Einlesen des Codes von JavaScript aufgerufen.
+		if (!string.IsNullOrEmpty(code) && (selectedProduct != null && selectedProduct.Id != 0))
+		{
+
+			var result = await productService.UpdateBarcodeAsync(selectedProduct.Id, code);
+			if (result.Result)
+			{
+				selectedProduct.Barcode = code;
+				ShowScanner = false;
+				showContextMenu = false;
+				StateHasChanged();
+				return;
+			}
+			else
+			{
+				await js.InvokeVoidAsync("alert", result.Message);
+				await OpenScanner();
+				return;
+			}
+		}
+		else
+			await js.InvokeVoidAsync("alert", "code oder selectedProduct ist null");
+	}
+	private async Task CloseScanner()
+	{
+		try
+		{
+			await js.InvokeVoidAsync("stopLiveScanner");
+		}
+		catch (Exception ex)
+		{
+			await js.InvokeVoidAsync("alert", ex.Message);
+		}
+		ShowScanner = false;
+		showContextMenu = false;
+	}
+	public void Dispose()
+	{
+		objRef?.Dispose();
+	}
+	private void OnMainDiv()
+	{
+		// hide die Menu if sichtbar
+		showContextMenu = false;
+	}
+}
+

@@ -1,0 +1,130 @@
+﻿@inject IStringLocalizer<Syriana_Manager.Components.Layout.SuppliersPage> L
+<div class="overlay">
+	<div class="standardOverlayForm" @onclick:stopPropagation="true">
+		<EditForm Model="@supplier" OnValidSubmit="Save">
+			<DataAnnotationsValidator />
+			<div class="overlayField">
+				<InputText id="supplierName" class="form-control" @bind-Value="supplier.Name" placeholder="Name de" />
+				<ValidationMessage For="@(() => supplier.Name)" />
+			</div>
+			<div class="overlayField">
+				<InputText id="supplierName" class="form-control" @bind-Value="supplier.Name_Ar" placeholder="Name ar" />
+				<ValidationMessage For="@(() => supplier.Name_Ar)" />
+			</div>
+			<div class="overlayField">
+				<InputText class="form-control" @bind-Value="supplier.Street" placeholder="@L["Street"]" />
+				<ValidationMessage For="@(() => supplier.Street)" />
+			</div>
+			<div class="overlayField">
+				<InputText class="form-control" @bind-Value="supplier.HNumber" placeholder="@L["HouseNumber"]" />
+				<ValidationMessage For="@(() => supplier.HNumber)" />
+			</div>
+			<div class="overlayField">
+				<InputText class="form-control" @bind-Value="supplier.PostalCode" placeholder="@L["PostalCode"]" />
+				<ValidationMessage For="@(() => supplier.PostalCode)" />
+			</div>
+			<div class="overlayField">
+				<InputText class="form-control" @bind-Value="supplier.City" placeholder="@L["City"]" />
+				<ValidationMessage For="@(() => supplier.City)" />
+			</div>
+			<div class="overlayField">
+				<InputText class="form-control" @bind-Value="supplier.Country" placeholder="@L["Country"]" />
+				<ValidationMessage For="@(() => supplier.Country)" />
+			</div>
+			<div class="overlayField">
+				<InputText class="form-control" @bind-Value="supplier.Phone" placeholder="@L["Tel."]" />
+				<ValidationMessage For="@(() => supplier.Phone)" />
+			</div>
+			<div class="overlayField">
+				<InputText class="form-control" @bind-Value="supplier.Email" placeholder="@L["EMail"]" />
+				<ValidationMessage For="@(() => supplier.Email)" />
+			</div>
+			<div class="overlayField">
+				<InputText class="form-control" @bind-Value="supplier.Website" placeholder="@L["Website"]" />
+				<ValidationMessage For="@(() => supplier.Website)" />
+			</div>
+			<div class="mt-3">
+				<button type="submit" class="btn btn-primary me-2" disabled="@IsProcessing">
+					@if (IsProcessing)
+					{
+						<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+					}
+					else
+					{
+						<span>@L["Save"]</span>
+					}
+				</button>
+				<button type="button" class="btn btn-secondary" @onclick="Cancel">@L["Cancel"]</button>
+			</div>
+		</EditForm>
+	</div>
+</div>
+
+@code {
+	[Parameter]
+	public Suppliers supplier { get; set; } = new();
+	[Parameter]
+	public string action { get; set; } = string.Empty;
+	[Parameter]
+	public EventCallback<string> OnHandel { get; set; }
+	private bool IsProcessing = false;
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			// scroll spreen
+			await js.InvokeVoidAsync("openFullscreen");
+		}
+	}
+	private async void Save()
+	{
+		IsProcessing = true;
+		TrimItems();
+		if (action == "Add")
+		{
+			var result = await suppliersService.AddSupplier(supplier);
+			if (result.Result)
+			{
+				await OnHandel.InvokeAsync(action);
+			}
+			else
+				await js.InvokeVoidAsync("window.alert", result.Message);
+		}
+		else
+		{
+			// wenn category editiert wurde
+			var result = await suppliersService.UpdateSupplier(supplier);
+			if (result != null && result.Result)
+			{
+				supplier = null!;
+				await OnHandel.InvokeAsync(action);
+			}
+			else
+				await js.InvokeVoidAsync("window.alert", result?.Message ?? "leere Message");
+		}
+
+		IsProcessing = false;
+		StateHasChanged();
+	}
+	private void Cancel()
+	{
+		supplier = new ();
+		OnHandel.InvokeAsync("Cancel");
+	}
+	private void TrimItems()
+	{
+		if (supplier != null)
+		{
+			supplier.Name = supplier.Name?.Trim()!;
+			supplier.Name_Ar = supplier.Name_Ar?.Trim()!;
+			supplier.Street = supplier.Street?.Trim()!;
+			supplier.HNumber = supplier.HNumber?.Trim()!;
+			supplier.PostalCode = supplier.PostalCode?.Trim()!;
+			supplier.City = supplier.City?.Trim()!;
+			supplier.Country = supplier.Country?.Trim()!;
+			supplier.Phone = supplier.Phone?.Trim()!;
+			supplier.Email = supplier.Email?.Trim()!;
+			supplier.Website = supplier.Website?.Trim()!;
+		}
+	}
+}

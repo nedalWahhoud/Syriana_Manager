@@ -1,0 +1,466 @@
+﻿@inject IStringLocalizer<Syriana_Manager.Components.Layout.ProductsManagement> L
+@inherits Syriana_Manager.Components.ProjectComponentBase
+<div class="overlay">
+	<div class="standardOverlayForm" @onclick:stopPropagation="true">
+		<EditForm Model="@GetProducts" OnValidSubmit="Save">
+			<DataAnnotationsValidator />
+			<div class="overlayField">
+				<div class="input-group">
+					<InputText id="productNameDe" class="form-control" @bind-Value="GetProducts!.Name_de" placeholder="Name de" />
+					<button class="btn btn-outline-danger" type="button" @onclick='() => ClearInput(val => GetProducts.Name_de = val, "productNameDe")'>
+						<i class="fas fa-times"></i>
+					</button>
+				</div>
+				<ValidationMessage For="@(() => GetProducts.Name_de)" />
+			</div>
+			<div class="overlayField">
+				<div class="input-group">
+					<InputText id="productDescriptionDe" class="form-control" @bind-Value="GetProducts.Description_de" placeholder="Description de" />
+					<button class="btn btn-outline-danger" type="button" @onclick='() => ClearInput(val => GetProducts.Description_de = val,"productDescriptionDe")'>
+						<i class="fas fa-times"></i>
+					</button>
+				</div>
+				<ValidationMessage For="@(() => GetProducts.Description_de)" />
+			</div>
+			<div class="overlayField">
+				<div class="input-group">
+					<InputText id="productNameAr" class="form-control" @bind-Value="GetProducts.Name_ar" placeholder="اسم المنتج بل عربية" />
+					<button class="btn btn-outline-danger" type="button" @onclick='() => ClearInput(val => GetProducts.Name_ar = val,"productNameAr")'>
+						<i class="fas fa-times"></i>
+					</button>
+				</div>
+				<ValidationMessage For="@(() => GetProducts.Name_ar)" />
+			</div>
+			<div class="overlayField">
+				<div class="input-group">
+					<InputText id="productDescriptionAr" class="form-control" @bind-Value="GetProducts.Description_ar" placeholder="وصف المنتج بل عربية" />
+					<button class="btn btn-outline-danger" type="button" @onclick='() => ClearInput(val => GetProducts.Description_ar = val,"productDescriptionAr")'>
+						<i class="fas fa-times"></i>
+					</button>
+				</div>
+				<ValidationMessage For="@(() => GetProducts.Description_ar)" />
+			</div>
+			<div class="overlayField">
+				<InputSelect id="category" class="form-control" @bind-Value="GetProducts.CategoryId">
+					<option value="0">@L["SelectCategory"]</option>
+					@foreach (var category in categoryService.DownloadedCategories)
+					{
+						<option value="@category.Id">@(IsArabic ? category.Name_ar : category.Name_de)</option>
+					}
+				</InputSelect>
+				<ValidationMessage For="@(() => GetProducts.CategoryId)" />
+			</div>
+			<div class="overlayField">
+				<div class="input-group">
+					<span class="input-group-text customLatIcon">Me</span>
+					<InputNumber id="productQuantity" min="0" class="form-control" @bind-Value="GetProducts.Quantity" @onfocus="@(e => SelectAllContent("productQuantity"))" />
+				</div>
+				<ValidationMessage For="@(() => GetProducts.Quantity)" />
+			</div>
+			<div class="overlayField">
+				<div class="input-group">
+					<span class="input-group-text customLatIcon">KaPr</span>
+					<InputNumber id="productPurchasePrice" min="0" class="form-control" @bind-Value="GetProducts.PurchasePrice" @onfocus="@(e => SelectAllContent("productPurchasePrice"))" />
+				</div>
+				<ValidationMessage For="@(() => GetProducts.PurchasePrice)" />
+			</div>
+			<div class="overlayField">
+				<div class="input-group">
+					<span class="input-group-text customLatIcon">VePr</span>
+					<InputNumber id="productSalePrice" min="0" class="form-control" @bind-Value="GetProducts.SalePrice" @onfocus="@(e => SelectAllContent("productSalePrice"))" />
+				</div>
+				<ValidationMessage For="@(() => GetProducts.SalePrice)" />
+			</div>
+			<div class="overlayField">
+				<div class="input-group">
+					<span class="input-group-text customLatIcon">MiBe</span>
+					<InputNumber id="productMinimumStock" min="0" class="form-control" @bind-Value="GetProducts.MinimumStock" @onfocus="@(e => SelectAllContent("productMinimumStock"))" />
+				</div>
+				<ValidationMessage For="@(() => GetProducts.MinimumStock)" />
+			</div>
+			<div class="overlayField">
+				<div class="input-group">
+					<span class="input-group-text customLatIcon"><i class="bi bi-calendar-event @(IsArabic ? "ms-2" : "me-2")"></i> AbDa</span>
+					<InputDate id="EXPDate" class="form-control" @bind-Value="GetProducts.EXPDate" />
+				</div>
+				<ValidationMessage For="@(() => GetProducts.EXPDate)" />
+			</div>
+			<div class="overlayField">
+				<label for="UnitType">@L["PackagingUnit"]</label>
+				<div class="row">
+					<div class="col-md-6">
+						<select @bind="GetProducts.PackagingUnit" class="form-select">
+							@foreach (PackagingUnits unit in Enum.GetValues(typeof(PackagingUnits)))
+							{
+								<option value="@unit">@L[unit.ToString()]</option>
+							}
+						</select>
+						<ValidationMessage For="@(() => GetProducts.PackagingUnit)" />
+					</div>
+					<div class="col-md-6">
+						<div class="input-group">
+							<span class="input-group-text customLatIcon">Items</span>
+							<InputNumber id="itemsPerPackage" min="0" class="form-control" @bind-Value="GetProducts.ItemsPerPackage" @onfocus="@(e => SelectAllContent("itemsPerPackage"))" />
+						</div>
+						<ValidationMessage For="@(() => GetProducts.ItemsPerPackage)" />
+					</div>
+				</div>
+			</div>
+			<div class="overlayField">
+				<label>@L["Supplier"]:</label>
+				<div class="supplier-list-container" style="border: 1px solid #cccccc; padding: 10px; border-radius: 5px; max-height: 200px; overflow-y: auto;">
+					@foreach (var Supplier in suppliersService.DownloadedSuppliers!)
+					{
+						<div class="form-check">
+							<input type="checkbox"
+							class="form-check-input"
+							id="sup-@Supplier.Id"
+							checked="@(GetProducts.SelectedSupplierIds?.Contains(Supplier.Id) ?? false)"
+							@onchange="(e) => ToggleSupplier(Supplier.Id, e.Value!)" />
+							<label class="form-check-label" for="sup-@Supplier.Id">@(IsArabic ? Supplier.Name_Ar : Supplier.Name)</label>
+						</div>
+					}
+				</div>
+				<ValidationMessage For="@(() => GetProducts.SelectedSupplierIds)" />
+			</div>
+			<div class="overlayField">
+				<InputSelect class="form-control" @bind-Value="GetProducts.TaxRateId">
+					<option value="0">@L["SelectTaxRate"]</option>
+					@foreach (var rate in taxRateService.DownloadedTaxRates)
+					{
+						<option value="@rate.Id">@rate.Rate</option>
+					}
+				</InputSelect>
+				<ValidationMessage For="@(() => GetProducts.TaxRateId)" />
+			</div>
+			<div class="overlayField">
+				<InputSelect class="form-control" @bind-Value="GetProducts.ProductGroupID">
+					<option value="0">@L["SelectProductGroup"]</option>
+					@foreach (var groupProduct in productGroupService.DownloadedproductGroups)
+					{
+						<option value="@groupProduct.Id">@(IsArabic ? groupProduct.GroupName_ar : groupProduct.GroupName_de)</option>
+					}
+				</InputSelect>
+				<ValidationMessage For="@(() => GetProducts.ProductGroupID)" />
+			</div>
+			<div class="overlayField">
+				<div class="input-group">
+					<span class="input-group-text customLatIcon">
+						<i class="bi bi-box-seam @(IsArabic ? "ms-2" : "me-2")"></i>@L["IsShippable"]
+					</span>
+					<div class="form-control d-flex justify-content-center align-items-center">
+						<InputCheckbox @bind-Value="GetProducts.IsShippable" class="form-check-input m-0" />
+					</div>
+				</div>
+				<ValidationMessage For="@(() => GetProducts.IsShippable)" />
+			</div>
+			<div class="overlayField">
+				@if (GetProducts.ProductDiscount != null)
+				{
+					<label for="ImAngebot">@L["OnSale"]</label>
+					<div class="card p-3 mb-3 gap-1">
+						<div class="overlayField">
+							<div class="input-group">
+								<span class="input-group-text"><i class="bi bi-tag-fill @(IsArabic ? "ms-2" : "me-2")"></i> </span>
+								<InputNumber id="productDiscountedPrice" class="form-control" min="0" @bind-Value="GetProducts.ProductDiscount.DiscountedPrice" @onfocus="@(e => SelectAllContent("productDiscountedPrice"))" />
+							</div>
+						</div>
+						<ValidationMessage For="@(() => GetProducts!.ProductDiscount.DiscountedPrice)" />
+						<div class="row">
+							<div class="col-md-6">
+								<div class="input-group">
+									<span class="input-group-text customLatIcon"><i class="bi bi-calendar-event @(IsArabic ? "ms-2" : "me-2")"></i>StDa</span>
+									<InputDate class="form-control" @bind-Value="GetProducts.ProductDiscount.StartDate" />
+								</div>
+								<ValidationMessage For="@(() => GetProducts!.ProductDiscount.StartDate)" />
+							</div>
+							<div class="col-md-6">
+								<div class="input-group">
+									<span class="input-group-text customLatIcon"><i class="bi bi-calendar-event @(IsArabic ? "ms-2" : "me-2")"></i>AbDa</span>
+									<InputDate class="form-control" @bind-Value="GetProducts.ProductDiscount.EndDate" />
+								</div>
+								<ValidationMessage For="@(() => GetProducts!.ProductDiscount.EndDate)" />
+							</div>
+						</div>
+					</div>
+				}
+			</div>
+			<div class="overlayField">
+				<div class="imageUpload">
+					<InputFile id="Image" class="form-control" OnChange="ImageUpload" />
+					@if (GetProducts.ProductImages != null && GetProducts.ProductImages.Count > 0)
+					{
+						ProductImages mainImage = GetProducts.ProductImages.FirstOrDefault(i => i.IsMain)!;
+						string imgScr = string.Empty;
+						if (!string.IsNullOrEmpty(mainImage.ImageUrlLocal))
+						{
+							imgScr = mainImage.ImageUrlLocal;
+						}
+						else
+						{
+							imgScr = productImagesService.GetProductImageUrl(mainImage);
+						}
+						<img src="@imgScr"
+						alt="Product Image"
+						class="previewImage" />
+						<ValidationMessage For="@(() => GetProducts!.ProductImages)" />
+					}
+				</div>
+			</div>
+			<div class="mt-3">
+				<button type="submit" class="btn btn-primary me-2" disabled="@IsProcessing">
+					@if (IsProcessing)
+					{
+						<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+					}
+					else
+					{
+						<span>@L["Save"]</span>
+					}					
+				</button>
+				<button type="button" class="btn btn-secondary" @onclick="CancelSubmit">@L["Cancel"]</button>
+			</div>
+		</EditForm>
+	</div>
+</div>
+@code {
+	[Parameter]
+	public Products GetProducts { get; set; } = new Products();
+	[Parameter]
+	public string Action { get; set; } = string.Empty;
+	[Parameter]
+	public Users? user { get; set; }
+	[Parameter]
+	public EventCallback<(Products product, string Action)> OnHandel { get; set; }
+
+	private bool IsProcessing = false;
+	protected override async void OnInitialized()
+	{
+
+		// get default image for add action, and Initialize die ProductDiscount
+		if (Action == "Add")
+		{
+			GetProducts.ProductImages.Add(await productImagesService.GetDefaultImage());
+		}
+		else
+		{
+			// Initialisiere die SelectedSupplierIds aus der Lieferantensammlung
+			GetProducts.SelectedSupplierIds = GetProducts.Suppliers
+											.Select(s => s.Id)
+											.ToList();
+		}
+		StateHasChanged();
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			// scroll spreen
+			await js.InvokeVoidAsync("openFullscreen");
+		}
+	}
+	private void ToggleSupplier(int supplierId, object checkedValue)
+	{
+		if (GetProducts.SelectedSupplierIds == null)
+			GetProducts.SelectedSupplierIds = new List<int>();
+
+		if ((bool)checkedValue)
+		{
+			if (!GetProducts.SelectedSupplierIds.Contains(supplierId))
+				GetProducts.SelectedSupplierIds.Add(supplierId);
+		}
+		else
+		{
+			GetProducts.SelectedSupplierIds.Remove(supplierId);
+		}
+	}
+
+	private async Task Save()
+	{
+		IsProcessing = true;
+
+		TrimItems();
+
+		if (Action == "Edit")
+		{
+			// wenn  nicht edited
+			Products? currentProduct = productService.DownloadedProduct.Find(p => p.Id == GetProducts.Id);
+
+
+			bool isEdited = productService.IsEditedProduct(currentProduct!, GetProducts);
+			if (!isEdited)
+			{
+				await js.InvokeVoidAsync("window.alert", "Nichts geändert");
+				IsProcessing = false;
+				return;
+			}
+
+			var result = await productService.UpdateProductAsync(GetProducts);
+			if (result.Result)
+			{
+				// get edited Product
+				var editedProduct = await productService.GetProductByIdAsync(GetProducts.Id);
+				GetProducts = editedProduct;
+
+				// initaialize the caritem for this new product
+				GetProducts.InitializeCartItem(0);
+
+				// Update the product in the list
+				int index = productService.DownloadedProduct!.FindIndex(p => p.Id == GetProducts.Id);
+				productService.DownloadedProduct[index] = GetProducts!; // Update the product in the list
+
+				// Benachrichtigen Sie die Vater Komponente über das Update
+				await OnHandel.InvokeAsync((GetProducts, Action));
+			}
+			else
+				await js.InvokeVoidAsync("window.alert", result.Message!);
+		}
+		else if (Action == "Add")
+		{
+			var isValid = productService.IsValidProduct(GetProducts!);
+			if (isValid.Result == false)
+			{
+				await js.InvokeVoidAsync("window.alert", isValid.Message!);
+				IsProcessing = false;
+				return;
+			}
+
+			// add user, the new Product added
+			GetProducts!.UserId = user?.Id ?? 0;
+
+			// löschen die ImageUrls bevor das Produkt hinzugefügt wird, weil wir brauchen die imageUrl nicht, da wird in Api in eine Datei gespeichert, und die URL wird generiert
+			GetProducts.ProductImages.ToList().ForEach(i => i.ImageUrl = string.Empty);
+
+			// Perform your logic to add the product to the database
+			var result = await productService.AddProductAsync(GetProducts!);
+			// Check if the result is successful and Get the ID returned by the database
+			if (result.Result)
+			{
+				// get neue Products von Database um auch die Id von Image und ProductDiscount mitzuholen
+				var editedProduct = await productService.GetProductByIdAsync(result.NewId ?? 0);
+				if (editedProduct == null)
+				{
+					await js.InvokeVoidAsync("window.alert", "Fehler bei Holung des neue Product von Database");
+					IsProcessing = false;
+					return;
+				}
+				GetProducts = editedProduct;
+
+				// initaialize the caritem for this new product
+				GetProducts.InitializeCartItem(0);
+
+				// Add the new product to the products list
+				productService.DownloadedProduct.Insert(0, GetProducts!); // Add the new product to the products list
+
+				// Benachrichtigen Sie die Vater Komponente über das Update
+				await OnHandel.InvokeAsync((GetProducts, Action));
+			}
+			else
+				await js.InvokeVoidAsync("window.alert", result.Message!);
+		}
+		IsProcessing = false;
+	}
+	private void CancelSubmit()
+	{
+		GetProducts = new();
+		OnHandel.InvokeAsync((GetProducts, "Cancel"));
+	}
+	// image 
+	private async Task ImageUpload(InputFileChangeEventArgs e)
+	{
+		if (e.File == null) return;
+		Microsoft.AspNetCore.Components.Forms.IBrowserFile imageFile = e.File;
+		try
+		{
+			if (Action == "Add")
+			{
+				byte[] imageBytes = await productImagesService.GetImageBytesAndCheckSize(imageFile);
+
+				string imageUrl = string.Empty;
+				if (imageBytes != null)
+				{
+					string base64 = Convert.ToBase64String(imageBytes);
+					imageUrl = $"data:image/jpeg;base64,{base64}";
+					var mainImage = GetProducts.ProductImages.FirstOrDefault(i => i.IsMain);
+					if (mainImage == null)
+					{
+						mainImage = new ProductImages
+							{
+								ProductId = 0,
+								ImageUrlLocal = imageUrl,
+								IsMain = true,
+								ImageBytes = imageBytes
+							};
+
+						GetProducts.ProductImages.Add(mainImage);
+					}
+					else
+					{
+						mainImage.ImageUrlLocal = imageUrl;
+						mainImage.ImageBytes = imageBytes;
+					}
+				}
+				else
+				{
+					ProductImages mainProductImages = await productImagesService.GetDefaultImage();
+					GetProducts.ProductImages.Add(mainProductImages);
+					return;
+				}
+			}
+			else
+			{
+				byte[] imageBytes = await productImagesService.GetImageBytesAndCheckSize(imageFile);
+
+				var mainImage = GetProducts.ProductImages.FirstOrDefault(i => i.IsMain);
+
+				if (mainImage != null)
+				{
+					string base64 = Convert.ToBase64String(imageBytes);
+					string imageUrl = $"data:image/jpeg;base64,{base64}";
+					mainImage.ProductId = GetProducts.Id;
+					mainImage.ImageUrlLocal = imageUrl;
+					mainImage.ImageBytes = imageBytes;
+					mainImage.LastModified = DateTime.UtcNow;
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			await js.InvokeVoidAsync("window.alert", $"Error uploading image: {ex.Message}");
+		}
+	}
+	// select all content in input when focus
+	private async Task SelectAllContent(string id)
+	{
+		try
+		{
+			await Task.Delay(10);
+			await js.InvokeVoidAsync("selectTextById", id);
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error: {ex.Message}");
+		}
+	}
+	// löschen funktion
+	private async Task ClearInput(Action<string> setter, string elementId)
+	{
+		setter(string.Empty);
+		// nutzen die selectTextById funktion um den Focus an input zu setzen, da die normale focus funktion nicht funktioniert nach dem löschen
+		await SelectAllContent(elementId);
+	}
+
+
+	private void TrimItems()
+	{
+		if (GetProducts != null)
+		{
+			GetProducts.Name_de = GetProducts.Name_de?.Trim();
+			GetProducts.Name_ar = GetProducts.Name_ar?.Trim();
+			GetProducts.Description_de = GetProducts.Description_de?.Trim();
+			GetProducts.Description_ar = GetProducts.Description_ar?.Trim();
+			GetProducts.Barcode = GetProducts.Barcode?.Trim();
+		}
+	}
+}

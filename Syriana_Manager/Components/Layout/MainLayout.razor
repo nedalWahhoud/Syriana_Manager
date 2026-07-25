@@ -1,0 +1,113 @@
+﻿
+@inherits LayoutComponentBase
+
+<div class="page">
+    <AuthorizeView>
+        <Authorized>
+            <div class="sidebar">
+                <NavMenu />
+            </div>
+            <main>
+                <article>
+                    <ErrorBoundary @ref="errorBoundary">
+                        <ChildContent>
+                            @Body
+                        </ChildContent>
+                        <ErrorContent Context="exception">
+                            @* Automatischer Reload nach Fehler, um Einfrieren zu verhindern*@
+                            @{
+                                TriggerAutomaticReload();
+                            }
+                            <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 100vh;">
+                                <div class="spinner-border text-danger" role="status" style="width: 3rem; height: 3rem;">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <h5 class="mt-3 text-muted fw-light">Ein Fehler ist aufgetreten. Versuche es erneut...</h5>
+                            </div>
+                        </ErrorContent>
+                    </ErrorBoundary>
+                </article>
+            </main>
+        </Authorized>
+        <NotAuthorized>
+            <Syriana_Manager.Pages.LogIn />
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
+
+@code {
+
+    private ErrorBoundary? errorBoundary;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+
+                var lang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+                var dir = lang == "ar" ? "rtl" : "ltr";
+
+                // استدعاء دالة JS لتطبيق الاتجاه واللغة
+                await js.InvokeVoidAsync("setAppDirection", lang, dir);
+                // version
+                await js.InvokeVoidAsync("setVersion", AppConfig.Version);
+                _ = CheckAdminStatusAsync();
+                // Initialize the orderService to start count funktion of openOrders
+                orderService.InitializeAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Fehler bei der Initialisierung von MainLyout: {ex.Message}");
+            }
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task CheckAdminStatusAsync()
+    {
+        // check admin status
+        var authState = await authProvider.GetAuthenticationStateAsync();
+        var localUser = authState.User;
+        if (localUser.Identity != null && localUser.Identity.IsAuthenticated)
+        {
+            var userIdStr = localUser.FindFirst(c => c.Type == ClaimTypes.NameIdentifier)?.Value!;
+            if (int.TryParse(userIdStr, out int userIdInt))
+            {
+                LoginModel loginModel = await authService.GetItemsUsersAsync(userIdInt);
+
+                if (loginModel == null)
+                {
+                    await authService.Logout();
+                    return;
+                }
+                else
+                {
+                    var claimsIdentity = (authProvider as CustomAuthStateProvider)?.GetIdentity(loginModel.Token);
+                    if (claimsIdentity == null)
+                        return;
+
+                    if (!claimsIdentity.HasClaim(ClaimTypes.Role, "admin"))
+                    {
+                        await authService.Logout();
+                        return;
+                    }
+                    // Benachrichtige den Anbieter des Authentifizierungsstatus über den neuen Authentifizierungsstatus.
+                    (authProvider as CustomAuthStateProvider)?.NotifyUserAuthentication(loginModel.Token);
+                    // aktualisieren Sie den Token im Local Storage, wenn nicht sessionToken ist
+                    string sessionToken = await (authProvider as CustomAuthStateProvider)?.SessionStorageGet("authToken")!;
+                    if (sessionToken == null)
+                        (authProvider as CustomAuthStateProvider)?.LocalstorageSet("authToken", loginModel.Token);
+                }
+            }
+        }
+    }
+    // error
+    private void TriggerAutomaticReload()
+    {
+        // forceLoad: true zwingt den Browser zu einer vollständigen Aktualisierung, um ein Einfrieren des Inhalts zu verhindern.
+        navigationManager.NavigateTo(navigationManager.Uri, forceLoad: true);
+    }
+}

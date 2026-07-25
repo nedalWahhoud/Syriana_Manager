@@ -1,0 +1,225 @@
+﻿@inject IStringLocalizer<Syriana_Manager.Components.Layout.CustomDropdownLayout> L
+<ul class="dropdown-menu customDropdown dropdown-menu-end">
+	@if (!IsDebtPage)
+	{
+		<li>
+			<a class="@(Permissions.IsDebtManage  ? "dropdown-item" : "disabledItem")" @onclick="@(Permissions.IsDebtManage ? EventCallback.Factory.Create<MouseEventArgs>(this, () => OnDebts(customer.Id))  : default!)">
+				<i class="bi bi-cash-stack me-1"></i>
+				@L["Debts"]
+			</a>
+		</li>
+	}
+	<li>
+		<a class="dropdown-item" @onclick="() => OnMap(customer)">
+			<i class="bi bi-geo-alt me-1"></i>
+			@L["Navigate"]
+		</a>
+	</li>
+	<li>
+		<a class="dropdown-item" @onclick="() => OnPhone(customer?.PhoneNumber!)">
+			<i class="bi bi-telephone me-1"></i>
+			@L["PhoneCall"]
+		</a>
+	</li>
+	<li>
+		<a class="dropdown-item" @onclick="() => OnWhatsAppMessage(customer)">
+			<i class="bi bi-chat-dots-fill me-1" style="color: #28a745;"></i>
+			@L["OpenWhatsApp"]
+		</a>
+	</li>
+	<li>
+		<a class="dropdown-item" @onclick="() => viaWhatasappShare(customer)">
+			<i class="bi bi-whatsapp me-1"></i>
+			@L["ShareViaWhatsApp"]
+		</a>
+	</li>
+	<li>
+		<a class="@(Permissions.IsRecordOneTimePayment  ? "dropdown-item" : "disabledItem")" @onclick="@(Permissions.IsRecordOneTimePayment ? EventCallback.Factory.Create<MouseEventArgs>(this, () => newOneTimePayment(customer))  : default!)">
+			<i class="bi bi-currency-exchange me-1"></i>
+			@L["RecordPayment"]
+		</a>
+	</li>
+	@if (!IsDebtPage)
+	{
+		<li>
+			<a class="@(Permissions.IsEdit  ? "dropdown-item" : "disabledItem")" @onclick="@(Permissions.IsEdit ? EventCallback.Factory.Create<MouseEventArgs>(this, () => Edit(customer))  : default!)">
+				<i class="bi bi-pencil-square me-1"></i>
+				@L["Edit"]
+			</a>
+		</li>
+		<li>
+			<a class="@(Permissions.IsEdit  ? "dropdown-item" : "disabledItem")" @onclick="@(Permissions.IsEdit ? EventCallback.Factory.Create<MouseEventArgs>(this, () => Delete(customer))  : default!)">
+				<i class="bi bi-trash3 me-1"></i>
+				@L["Delete"]
+			</a>
+		</li>
+	}
+</ul>
+
+@code {
+	[Parameter]
+	public Customers customer { get; set; } = null!;
+	[Parameter]
+	public List<Customers> FilteredCustomers { get; set; } = null!;
+	[Parameter]
+	public (bool IsEdit, bool IsDebtManage, bool IsRecordOneTimePayment) Permissions { get; set; } = (false, false, false);
+	[Parameter]
+	public EventCallback<(string action, CustomerProcess customerProcess, bool IsEditing,OneTimePayment oneTimePayment ,bool IsOneTimePaymentProcessing)> OnHandel { get; set; }
+
+	private bool IsDebtPage = false;
+	private CustomerProcess customerProcess = new CustomerProcess();
+	protected override void OnInitialized()
+	{
+		var relativePath = navigationManager.ToBaseRelativePath(navigationManager.Uri);
+
+		if (relativePath.StartsWith("debt", StringComparison.OrdinalIgnoreCase))
+		{
+			IsDebtPage = true;
+		}
+
+		// Setze die CustomerId im CustomerProcess-Objekt
+		if (customer != null)
+			customerProcess.CustomerId = customer.Id;
+	}
+	private async Task viaWhatasappShare(Customers customer)
+	{
+		var result = await whatsAppService.SendCustomerInfo(customer);
+		if (!result.Result)
+		{
+			await js.InvokeVoidAsync("alert", result.Message);
+		}
+	}
+	private async Task OnDebts(int customerId)
+	{
+		if (customer != null)
+			await localStorageService.Set("selectedStopNummerId", customer.StopNumber);
+		navigationManager.NavigateTo($"/debt/{customerId}");
+	}
+	private async Task OnMap(Customers customer)
+	{
+		try
+		{
+
+			var (isValidCoordinates, hasAddress, fullAddress) = customersService.ValidateAndBuildMapAddress(customer);
+			if (!isValidCoordinates && !hasAddress)
+			{
+				await js.InvokeVoidAsync("alert", "Keine gültigen Koordinaten oder Adresse für diesen Kunden vorhanden.");
+				return;
+			}
+
+			await js.InvokeVoidAsync("mapRedirect.openMap", customer.Latitude, customer.Longitude, fullAddress);
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"OnMap Fehler CustomDropdown{ex.InnerException?.Message ?? ex.Message}");
+		}
+	}
+	private async Task OnPhone(string phoneNumber)
+	{
+		try
+		{
+			if (customer == null || string.IsNullOrWhiteSpace(customer.PhoneNumber))
+			{
+				await js.InvokeVoidAsync("alert", "Keine Telefonnummer für diesen Kunden vorhanden.");
+				return;
+			}
+
+			await js.InvokeVoidAsync("phoneRedirect.openPhoneDialer", customer.PhoneNumber);
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error redirecting to phone: {ex.Message}");
+		}
+	}
+	private async Task OnWhatsAppMessage(Customers customer)
+	{
+		var result = await whatsAppService.SendMassage(customer);
+		if (!result.Result)
+		{
+			await js.InvokeVoidAsync("alert", result.Message);
+		}
+	}
+	public async Task newOneTimePayment(Customers customer)
+	{
+		var oneTimePayment = new OneTimePayment
+			{
+				CustomerId = customer.Id,
+				Customer = customer,
+				DistributionLineId = customer.DistributionLineId,
+				DistributionLine = customer?.DistributionLine ??
+						(distributionLinesService.DownloadedDistributionLines.FirstOrDefault(dl => dl.Id == customer?.DistributionLineId) ?? await distributionLinesService.GetDistributionLineByIdAsync(customer?.DistributionLineId ?? 0))
+			};
+		await OnHandel.InvokeAsync(("oneTimePayment", new(), false, oneTimePayment, true));
+	}
+	private async Task Delete(Customers customer)
+	{
+		try
+		{
+			if (customer == null || customer.Id <= 0)
+			{
+				await js.InvokeVoidAsync("alert", "Bitte wählen Sie einen Kunde aus.");
+				return;
+			}
+			customerProcess = new CustomerProcess
+				{
+					IsProcessing = true,
+					CustomerId = customer.Id
+				};
+			await OnHandel.InvokeAsync(("Delete", customerProcess, false,new(), false));
+			var resultConfirm = await js.InvokeAsync<bool>("confirm", $"Möchten Sie den Kunde {customer.Name_de} / {customer.Name_ar} wirklich löschen?");
+			if (resultConfirm)
+			{
+				var result = await customersService.DeleteCustomer(customer.Id);
+				customerProcess.Result = result;
+				if (!result.Result)
+				{
+					await js.InvokeVoidAsync("alert", result.Message);
+				}
+				// Remove the deleted customer from the filtered list if it exists
+				if (FilteredCustomers != null)
+				{
+					var customerToRemove = FilteredCustomers.FirstOrDefault(c => c.Id == customer.Id);
+					if (customerToRemove != null)
+					{
+						FilteredCustomers.Remove(customerToRemove);
+					}
+				}
+			}
+			customerProcess.IsProcessing = false;
+			customerProcess.CustomerId = customer.Id;
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error deleting customer: {ex.Message}");
+			customerProcess.IsProcessing = false;
+			customerProcess.CustomerId = customer.Id;
+		}
+
+		await OnHandel.InvokeAsync(("Delete", customerProcess, false,new(), false));
+	}
+	private async Task Edit(Customers customers)
+	{
+		var editingCustomer = new Customers
+			{
+				Id = customers.Id,
+				Name_de = customers.Name_de,
+				Name_ar = customers.Name_ar,
+				Street = customers.Street,
+				BuildingNumber = customers.BuildingNumber,
+				PostalCode = customers.PostalCode,
+				City = customers.City,
+				Latitude = customers.Latitude,
+				Longitude = customers.Longitude,
+				PhoneNumber = customers.PhoneNumber,
+				Email = customers.Email,
+				Notes_de = customers.Notes_de,
+				Notes_ar = customers.Notes_ar,
+				DistributionLineId = customers.DistributionLineId,
+				DistributionLine = customers.DistributionLine,
+				StopNumber = customers.StopNumber,
+				PIN = customers.PIN
+			};
+
+		await OnHandel.InvokeAsync(("Edit", new CustomerProcess(){EditingCustomer = editingCustomer}, true,new (),false));
+	}
+}

@@ -1,0 +1,666 @@
+﻿@page "/oneTimePayments"
+@namespace Syriana_Manager.Components.Layout
+@inject IStringLocalizer<Syriana_Manager.Components.Layout.OneTimePaymentsPage> L
+<div class="mainDiv" @onclick="OnMainDiv">
+    <AuthorizeView>
+        <Authorized Context="authContext">
+            @if (!IsRendered.Initialized || !IsRendered.ParametersSet || !IsRendered.AfterRender)
+            {
+                <Syriana_Manager.Components.Layout.Loading />
+            }
+            else
+            {
+                @if (IsHasViewPageAndManageStatusCustomerOneTimePaymentPermoission)
+                {
+                    @* menu context *@
+                    @if (showContextMenu && selectedPayment != null)
+                    {
+                        bool isNotOpen = selectedPayment.Status != OneTimePaymentStatus.Offen;
+                        <div class="contextMenu dropdown-menu-end dropdown-menu"
+                        style="position: fixed; top: @(menuY)px; left: @(menuX)px; display: block;"
+                        @onclick:stopPropagation="true">
+                            <ul>
+                                <li>
+                                    <a class="dropdown-item" @onclick="() => OnPhone(selectedPayment.Customer?.PhoneNumber!)">
+                                        <i class="bi bi-telephone me-1"></i>
+                                        @L["PhoneCall"]
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" @onclick="() => OnWhatsAppMessage(selectedPayment.Customer!)">
+                                        <i class="bi bi-chat-dots-fill me-1" style="color: #28a745;"></i>
+                                        @L["OpenWhatsApp"]
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" @onclick="() => OnMap(selectedPayment.Customer!)">
+                                        <i class="bi bi-geo-alt me-1"></i>
+                                        @L["Navigate"]
+                                    </a>
+                                </li>
+                                <li class="@(!IsHasManageCustomerOneTimePaymentPermission ? "disabled text-muted pe-none opacity-50" : "")"
+                                @onclick="() => Delete(selectedPayment)">
+                                    <a><i class="fa-solid fa-trash-can"></i> @L["Delete"]</a>
+                                </li>
+                                <li class="@((isNotOpen || !IsHasManageCustomerOneTimePaymentPermission) ? "disabled text-muted pe-none opacity-50" : "")"
+                                @onclick="() => EditTotalAmount(selectedPayment)">
+                                    <a><i class="fa-solid fa-pen-to-square"></i> @L["Edit"]</a>
+                                </li>
+                                <li class="@((!isNotOpen || selectedPayment.Status == OneTimePaymentStatus.Verschoben) ? "disabled text-muted pe-none opacity-50" : "")"
+                                @onclick="() => OnNotifyCustomer(selectedPayment)">
+                                    <a><i class="bi bi-whatsapp me-2"></i> @L["NotifyCustomer"]</a>
+                                </li>
+                            </ul>
+                        </div>
+                    }
+                    <div class="Continer">
+                        <div class="topTable">
+                            <div class="buttonsDiv">
+                                @* add neu Product *@
+                                <button class="btn btn-success h-100 d-flex" @onclick="newUnexpectedPayment">@L["NewPayment"]</button>
+                            </div>
+                        </div>
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-primary text-white fw-bold fs-5">
+                                <i class="bi bi-geo-alt-fill me-2"></i> @L["Lines"]
+                            </div>
+                            <div class="list-group list-group-flush">
+                                @foreach (var line in distributionLinesService.DownloadedDistributionLines)
+                                {
+                                    var isLineOpen = SelectedLine?.Id == line.Id;
+
+                                    <button type="button"
+                                    class="list-group-item list-group-item-action p-3 d-flex justify-content-between align-items-center @(isLineOpen ? "bg-light fw-bold" : "")"
+                                    @onclick="() => ToggleLine(line)">
+                                        <span class="fs-5 text-dark">
+                                            <i class="bi @(isLineOpen ? "bi-chevron-down text-primary" : "bi-chevron-right text-secondary") me-3"></i>
+                                            @line.LineName
+                                        </span>
+                                        <span class="badge @(isLineOpen ? "bg-primary" : "bg-secondary") p-2">
+                                            @(isLineOpen ? L["Active"] : L["Open"])
+                                        </span>
+                                    </button>
+
+                                    @if (isLineOpen)
+                                    {
+                                        <div class="p-3 bg-white border-start border-primary border-4 animate__animated animate__fadeIn">
+                                            <div class="row">
+                                                <div class="@(SelectedDate != null ? "col-md-4" : "") border-end">
+                                                    <div class="list-group">
+                                                        @if (IsLoadingDates)
+                                                        {
+                                                            <div class="text-center p-3"><div class="spinner-border spinner-border-sm text-success"></div></div>
+                                                        }
+                                                        else if (oneTimePaymentsGroup.Count == 0 && !IsLoadingDates)
+                                                        {
+                                                            <div class="p-4 text-secondary text-center small bg-light rounded border border-dashed">
+                                                                <i class="bi bi-inbox fs-3 d-block mb-2 text-muted"></i>
+                                                                @L["NoPaymentsAvailable"]
+                                                            </div>
+                                                        }
+                                                        else
+                                                        {
+                                                            @foreach (var date in oneTimePaymentsGroup)
+                                                            {
+                                                                <button type="button"
+                                                                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center @(SelectedDate == date ? "list-group-item-success" : "")"
+                                                                @onclick="() => OnGroupSelected(date)">
+                                                                    <span><i class="bi bi-clock-history @(IsArabic ? "ms-2" :"me-2")"></i>@date.GroupPickupDate.ToString("dd.MM.yyyy")</span>
+                                                                    <i class="bi bi-arrow-right text-success"></i>
+                                                                </button>
+                                                            }
+                                                        }
+                                                    </div>
+                                                </div>
+                                                @if (SelectedDate != null)
+                                                {
+                                                    <div class="col-md-8">
+                                                        <h6 class="text-dark fw-bold mt-1">
+                                                            <i class="bi bi-receipt me-2 mt-1"></i>
+                                                            @L["PickupDate"] @(SelectedDate != null ? $" {SelectedDate?.GroupPickupDate.ToString("dd.MM.yyyy")}" : "")
+                                                        </h6>
+
+                                                        @if (SelectedDate?.Payments.Count == 0)
+                                                        {
+                                                            <div class="alert alert-warning text-center p-4 small">@L["NoPaymentsAvailable"]</div>
+                                                        }
+                                                        else
+                                                        {
+                                                            double collected = 0;
+                                                            <div class="table-responsive" style="overflow: visible;">
+                                                                <table class="table table-sm table-striped table-hover align-middle m-0">
+                                                                    <thead class="table-light">
+                                                                        <tr>
+                                                                            <th>@L["Customer"]</th>
+                                                                            <th class="text-center">@L["Amount"]</th>
+                                                                            <th class="text-center">@L["AmountReceived"]</th>
+                                                                            <th class="text-center">@L["Note"]</th>
+                                                                            <th class="text-center">@L["Status"]</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        @foreach (var p in SelectedDate?.Payments ?? new())
+                                                                        {
+                                                                            collected += p.AmountCollected;
+
+                                                                            <tr @key="p.Id"
+                                                                            @oncontextmenu:preventDefault="true"
+                                                                            @oncontextmenu="@(e => OnSelectRow(p, e))"
+                                                                            @ondblclick="(e) => OnDoubleTap(p, e)"
+                                                                            class="@(selectedPayment?.Id == p.Id ? "selected" : "")">
+                                                                                <td class="fw-medium">@(IsArabic ? p.Customer?.Name_ar : p.Customer?.Name_de ?? "Fehler")</td>
+                                                                                <td class="text-center text-info-emphasis">
+                                                                                    @p.TotalAmount.ToString("N2") €
+                                                                                </td>
+                                                                                <td class="text-center @oneTimePaymentsService.GetStatusClass(p.Status,false,false)">@p.AmountCollected.ToString("N2") €</td>
+                                                                                <td class="text-center">@(string.IsNullOrWhiteSpace(p.Notes) ? "-" : p.Notes)</td>
+                                                                                <td class="text-center">
+                                                                                    @if (p.IsProcessing)
+                                                                                    {
+                                                                                        <div class="d-inline-block p-1">
+                                                                                            <div class="spinner-border spinner-border-sm text-primary" role="status" style="width: 1.2rem; height: 1.2rem;">
+                                                                                                <span class="visually-hidden">@L["Loading"]</span>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    }
+                                                                                    else
+                                                                                    {
+                                                                                        <div class="dropdown">
+                                                                                            <button class="@oneTimePaymentsService.GetStatusClass(p.Status,true)" type="button" id="statusDropdown-@p.Id" data-bs-toggle="dropdown"
+                                                                                            data-bs-boundary="viewport"
+                                                                                            aria-expanded="false"
+                                                                                            style="border: none;">
+                                                                                                <span class="@(IsArabic ? "ms-2" : "me-2")">@L[p.Status.ToString()]</span>
+                                                                                            </button>
+                                                                                            <ul class="dropdown-menu" aria-labelledby="statusDropdown-@p.Id">
+                                                                                                @foreach (OneTimePaymentStatus newStatus in Enum.GetValues(typeof(OneTimePaymentStatus)))
+                                                                                                {
+                                                                                                    <li>
+                                                                                                        <button class="dropdown-item" type="button" @onclick="() => UpdateStatus(newStatus,p)">
+                                                                                                            @L[newStatus.ToString()]
+                                                                                                        </button>
+                                                                                                    </li>
+                                                                                                }
+                                                                                            </ul>
+                                                                                        </div>
+                                                                                    }
+                                                                                </td>
+                                                                            </tr>
+                                                                        }
+                                                                        @if (SelectedDate?.Payments != null && SelectedDate.Payments.Any())
+                                                                        {
+                                                                            <tr class="table-success fw-bold border-top border-dark">
+                                                                                <td></td>
+                                                                                <td class ="text-center fw-bold">@(SelectedDate.Payments.Sum(p => p.TotalAmount).ToString("N2")) €</td>
+                                                                                <td class="text-center text-success fw-bold">
+                                                                                    @(SelectedDate.Payments.Sum(p => p.AmountCollected).ToString("N2")) €
+                                                                                </td>
+                                                                                <td></td>
+                                                                                <td></td>
+                                                                            </tr>
+                                                                        }
+
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    if (IsOneTimePaymentProcessing.Item1)
+                    {
+                        <Syriana_Manager.Components.Layout.OverlayEditAddFormOneTimePayment Action="@IsOneTimePaymentProcessing.Item2" OneTimePayment="editOneTimePayment ?? new()" OnHandel="HandleOneTimePayment" />
+                    }
+
+                    @* map select *@
+                    <Syriana_Manager.Components.Layout.MapSelect />
+                }
+                else
+                {
+                    <div style="display:flex; justify-content:center; align-items:center; height:80vh;">
+                        <div class="alert alert-danger text-center">
+                            @L["NoPermission"]
+                        </div>
+                    </div>
+                }
+            }
+        </Authorized>
+        <NotAuthorized>
+            <Syriana_Manager.Pages.LogIn />
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
+@code {
+
+    private List<OneTimePaymentsGroupDto> oneTimePaymentsGroup { get; set; } = new();
+    private OneTimePayment editOneTimePayment = null!;
+
+    private DistributionLines SelectedLine { get; set; } = new();
+    private List<(Task<ValidationResult> task,int lineId)> tasks = new();
+    private bool IsHasManageCustomerOneTimePaymentPermission = false;
+    private bool IsHasViewPageAndManageStatusCustomerOneTimePaymentPermoission = false;
+    protected override async Task OnParametersSetAsync()
+    {
+        var authState = await authProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        IsHasManageCustomerOneTimePaymentPermission = user.HasClaim("permission", "manageCustomerOneTimePayment") || user.HasClaim("permission", "fullAccess");
+        IsHasViewPageAndManageStatusCustomerOneTimePaymentPermoission = user.HasClaim("permission", "viewPageAndManageStatusCustomerOneTimePayment") || user.HasClaim("permission", "fullAccess");
+
+        if (distributionLinesService.DownloadedDistributionLines == null || distributionLinesService.DownloadedDistributionLines.Count == 0)
+            await distributionLinesService.GetAllDistributionLinesAsync();
+
+        tasks.Clear();
+        if (distributionLinesService.DownloadedDistributionLines != null && distributionLinesService.DownloadedDistributionLines.Count != 0)
+        {
+            foreach (var line in distributionLinesService.DownloadedDistributionLines)
+            {
+                var task = oneTimePaymentsService.GetGroupedPaymentsByLineId(line.Id);
+                tasks.Add((task, line.Id));
+            }
+        }
+
+		// prüfen, ob es eine Gruppe mit dem heutigen Datum gibt, wenn ja, dann die line und date automatisch auswählen
+        foreach (var task in tasks)
+        {
+            ValidationResult result = await task.task;
+            if (result.Result)
+            {
+                OneTimePaymentsGroupDto? cachedGroup = oneTimePaymentsService.DownloadedGroups
+				.SelectMany(s => s.Group)
+                .FirstOrDefault(g => g.GroupPickupDate == DateTime.Today);
+                if (cachedGroup != null)
+                {
+                    DistributionLines distributionLine = distributionLinesService.GetDistributionLineByIdLocal(task.lineId) 
+                    ?? await distributionLinesService.GetDistributionLineByIdAsync(task.lineId);
+                    await ToggleLine(distributionLine);
+                    OnGroupSelected(cachedGroup);
+                    break;
+                }
+            }
+        }
+
+
+        // afterRender und ParameterSet true, weil wir nutzen die funktionen hier nicht
+        IsRendered.AfterRender = IsRendered.ParametersSet = true;
+        IsRendered.Initialized = true;
+    }
+
+    private bool IsLoadingDates = false;
+    private async Task ToggleLine(DistributionLines distributionLine)
+    {
+        if (SelectedLine != null && SelectedLine.Id == distributionLine.Id)
+        {
+            SelectedLine = null!;
+            oneTimePaymentsGroup.Clear();
+            SelectedDate = null!;
+            return;
+        }
+
+        IsLoadingDates = true;
+        SelectedLine = distributionLine;
+        oneTimePaymentsGroup.Clear();
+        SelectedDate = null!;
+
+        ValidationResult result = null!;
+        var taskForLine = tasks.FirstOrDefault(t => t.lineId == distributionLine.Id).task;
+        if (taskForLine != null)
+        {
+            if (!taskForLine.IsCompleted)
+            {
+                result = await taskForLine;
+            }
+            else
+            {
+                result = taskForLine.Result;
+            }
+        }
+        else
+        {
+            result = await oneTimePaymentsService.GetGroupedPaymentsByLineId(SelectedLine.Id);
+        }
+
+        if (result.Result)
+        {
+            var cachedData = oneTimePaymentsService.DownloadedGroups.FirstOrDefault(lineList => lineList.Group.Any(group => group.Payments.Any(p => p.DistributionLineId == distributionLine.Id))).Group ?? new();
+            oneTimePaymentsGroup = cachedData.ToList();
+        }
+        else
+            await js.InvokeVoidAsync("alert", result.Message);
+
+
+        IsLoadingDates = false;
+    }
+
+    private OneTimePaymentsGroupDto SelectedDate { get; set; } = null!;
+    private void OnGroupSelected(OneTimePaymentsGroupDto group)
+    {
+        SelectedDate = group;
+    }
+
+    private async Task UpdateStatus(OneTimePaymentStatus newStatus, OneTimePayment currentPayment)
+    {
+        if (currentPayment.Status == newStatus && (newStatus != OneTimePaymentStatus.TeilweiseInkassiert && newStatus != OneTimePaymentStatus.Ueberzahlt
+        && newStatus != OneTimePaymentStatus.Verschoben))
+            return;
+
+        // get die customer und Distributionline und löschen die von model, damit nicht an backend gesendet wird, und mehr data sinnlos schicken
+        var customer = (currentPayment.Customer
+                           ?? (customersService.GetCustomerByIdLocal(currentPayment.CustomerId)
+                           ?? await customersService.GetCustomerByIdAsync(currentPayment.CustomerId)));
+
+        var distributionLine = (currentPayment.DistributionLine
+            ?? (distributionLinesService.GetDistributionLineByIdLocal(currentPayment.DistributionLineId)
+            ?? await distributionLinesService.GetDistributionLineByIdAsync(currentPayment.DistributionLineId)));
+        editOneTimePayment = new()
+            {
+                Id = currentPayment.Id,
+                CustomerId = currentPayment.CustomerId,
+                DistributionLineId = currentPayment.DistributionLineId,
+                TotalAmount = currentPayment.TotalAmount,
+                AmountCollected = currentPayment.AmountCollected,
+                Status = newStatus,
+                Notes = currentPayment.Notes,
+                CreatedAt = currentPayment.CreatedAt,
+                PickupDate = currentPayment.PickupDate
+
+            };
+        if (newStatus == OneTimePaymentStatus.TeilweiseInkassiert || newStatus == OneTimePaymentStatus.Ueberzahlt || newStatus == OneTimePaymentStatus.Verschoben)
+        {
+            if (newStatus == OneTimePaymentStatus.Verschoben)
+                editOneTimePayment.AmountCollected = 0;
+
+            // die customer und Distributionline werden in der EditAddFormOneTimePayment benötigt
+            editOneTimePayment.Customer = customer;
+            editOneTimePayment.DistributionLine = distributionLine;
+
+            IsOneTimePaymentProcessing = (true, "updateStatus");
+            return;
+        }
+        else if (newStatus == OneTimePaymentStatus.VollstaendigInkassiert)
+            editOneTimePayment.AmountCollected = currentPayment.TotalAmount;
+        else
+            editOneTimePayment.AmountCollected = 0;
+
+        currentPayment.IsProcessing = true;
+        var result = await oneTimePaymentsService.UpdateOneTimePaymentAsync(editOneTimePayment);
+        if (result.Result)
+        {
+            // customer und distributionLine wieder zuweisen, damit die UI angezigt wird, und Fehlende Data vermeiden
+            editOneTimePayment.Customer = customer;
+            editOneTimePayment.DistributionLine = distributionLine;
+
+            UpdateSelectedDate(editOneTimePayment);
+        }
+        else
+        {
+            await js.InvokeVoidAsync("alert", result.Message);
+        }
+        editOneTimePayment = null!;
+        currentPayment.IsProcessing = false;
+    }
+
+    private (bool , string) IsOneTimePaymentProcessing = (false,null!);
+    public void HandleOneTimePayment((string action, OneTimePayment? oneTimePayment) args)
+    {
+        if (args.action == "updateStatus" || args.action == "editTotalAmount")
+        {
+            if (args.oneTimePayment != null)
+            {
+                UpdateSelectedDate(args.oneTimePayment);
+            }
+        }
+        else if (args.action == "UnexpectedPayment")
+        {
+            // wir klappen alle line und date zu, um der Benutzer nochmal auf eine Date zu klicken, und die data von server aktualisieren, damit die neue unerwartete Zahlung angezeigt wird, und die Daten immer aktuell sind
+            /* SelectedLine = null!;
+             SelectedDate = null!;
+             selectedPayment = null!;
+             oneTimePaymentsGroup.Clear();*/
+
+            // die task für die line von die neue unerwartete Zahlung löschen, damit wenn der Benutzer auf die line klickt, wird die data von server aktualisiert, und die neue unerwartete Zahlung angezeigt wird
+            int lineId = args.oneTimePayment?.DistributionLineId ?? 0;
+            tasks.RemoveAll(t => t.lineId == lineId);
+            // starten eine taks um die data von server zu holen
+            tasks.Add((oneTimePaymentsService.GetGroupedPaymentsByLineId(lineId), lineId));
+            // 
+            SelectedLine = args.oneTimePayment?.DistributionLine ?? null!;
+
+            var cachedData = oneTimePaymentsService.DownloadedGroups.FirstOrDefault(lineList => lineList.Group.Any(group => group.Payments.Any(p => p.DistributionLineId == lineId))).Group ?? new();
+            oneTimePaymentsGroup = cachedData.ToList();
+            SelectedDate = cachedData.Find(g => g.GroupPickupDate.Date == args.oneTimePayment?.PickupDate.Date) ?? null!;
+			selectedPayment = args.oneTimePayment;
+        }
+        this.IsOneTimePaymentProcessing = (false, null!);
+        this.editOneTimePayment = null!;
+    }
+
+    // totalamount
+    private async Task UpdateTotalAmount(OneTimePayment currentPayment)
+    {
+        currentPayment.IsProcessingEditingAmount = true;
+
+
+        // prüfen, ob der Betrag geändert wurde, wenn nicht, dann abbrechen die Bearbeitung, und die Spinner entfernen
+        bool isEdited = oneTimePaymentsService.IsEdited(editOneTimePayment, currentPayment);
+        if (!isEdited)
+        {
+            currentPayment.IsProcessingEditingAmount = false;
+            return;
+        }
+        // prüfen, ob der Betrag größer als 0 ist, wenn nicht, dann abbrechen die Bearbeitung, und die Spinner entfernen
+        if (currentPayment.TotalAmount <= 0)
+        {
+            UpdateSelectedDate(editOneTimePayment);
+            currentPayment.IsProcessingEditingAmount = false;
+            return;
+        }
+
+        var customer = (currentPayment.Customer
+                          ?? (customersService.GetCustomerByIdLocal(currentPayment.CustomerId)
+                          ?? await customersService.GetCustomerByIdAsync(currentPayment.CustomerId)));
+
+        var distributionLine = (currentPayment.DistributionLine
+            ?? (distributionLinesService.GetDistributionLineByIdLocal(currentPayment.DistributionLineId)
+            ?? await distributionLinesService.GetDistributionLineByIdAsync(currentPayment.DistributionLineId)));
+
+        var result = await oneTimePaymentsService.UpdateOneTimePaymentAsync(currentPayment);
+        if (result.Result)
+        {
+            // customer und distributionLine wieder zuweisen, damit die UI angezigt wird, und Fehlende Data vermeiden
+            editOneTimePayment.Customer = customer;
+            editOneTimePayment.DistributionLine = distributionLine;
+
+            UpdateSelectedDate(currentPayment);
+        }
+        else
+        {
+            await js.InvokeVoidAsync("alert", result.Message);
+        }
+        editOneTimePayment = null!;
+        currentPayment.IsProcessingEditingAmount = false;
+    }
+    private void CancelEditTotalAmount(OneTimePayment oneTimePayment)
+    {
+        editOneTimePayment.Customer = oneTimePayment.Customer;
+        UpdateSelectedDate(editOneTimePayment);
+        editOneTimePayment = null!;
+    }
+
+    // Menu recht klicken
+    private bool showContextMenu = false;
+    private double menuX;
+    private double menuY;
+    private string menuXpx => $"{menuX}px";
+    private string menuYpx => $"{menuY}px";
+    private OneTimePayment? selectedPayment;
+    private void OnSelectRow(OneTimePayment payment, MouseEventArgs e)
+    {
+        selectedPayment = payment;
+        menuX = e.ClientX;
+        menuY = e.ClientY;
+        showContextMenu = true;
+    }
+    private void OnDoubleTap(OneTimePayment payment, MouseEventArgs e)
+    {
+        selectedPayment = payment;
+        menuX = e.ClientX;
+        menuY = e.ClientY;
+        showContextMenu = true;
+    }
+    private async Task Delete(OneTimePayment payment)
+    {
+        var isConfirmed = await js.InvokeAsync<bool>("confirm", $"Sind Sie sicher, dass Sie die Einmalzahlung von {payment.Customer?.Name_de} / {payment.Customer?.Name_ar} löschen möchten?");
+        if (isConfirmed)
+        {
+            var result = await oneTimePaymentsService.DeleteAsync(payment.Id);
+            if (result.Result)
+            {
+                // die UI sofort aktualisieren
+                SelectedDate?.Payments.Remove(payment);
+                if (SelectedDate != null && SelectedDate.Payments.Count == 0)
+                {
+                    oneTimePaymentsGroup.Remove(SelectedDate);
+                    SelectedDate = null!;
+                }
+            }
+            else
+            {
+                await js.InvokeVoidAsync("alert", result.Message);
+            }
+        }
+
+        selectedPayment = null!;
+        showContextMenu = false;
+    }
+    private void UpdateSelectedDate(OneTimePayment newPayment)
+    {
+        if (SelectedDate != null)
+        {
+            var index = SelectedDate.Payments.FindIndex(p => p.Id == newPayment.Id);
+            if (index != -1)
+            {
+                SelectedDate.Payments[index] = newPayment;
+            }
+        }
+    }
+    private async Task EditTotalAmount(OneTimePayment p)
+    {
+        var customer = (p.Customer
+                         ?? (customersService.GetCustomerByIdLocal(p.CustomerId)
+                         ?? await customersService.GetCustomerByIdAsync(p.CustomerId)));
+
+        var distributionLine = (p.DistributionLine
+            ?? (distributionLinesService.GetDistributionLineByIdLocal(p.DistributionLineId)
+            ?? await distributionLinesService.GetDistributionLineByIdAsync(p.DistributionLineId)));
+
+        editOneTimePayment = new OneTimePayment
+            {
+                Id = p.Id,
+                CustomerId = p.CustomerId,
+                DistributionLineId = p.DistributionLineId,
+                TotalAmount = p.TotalAmount,
+                PickupDate = p.PickupDate,
+                AmountCollected = p.AmountCollected,
+                Status = p.Status,
+                Notes = p.Notes,
+                CreatedAt = p.CreatedAt,
+                Customer = customer,
+                DistributionLine = distributionLine
+            };
+        IsOneTimePaymentProcessing = (true, "editTotalAmount");
+        showContextMenu = false;
+    }
+    private async Task OnNotifyCustomer(OneTimePayment payment)
+    {
+        Customers customer = payment.Customer != null ? payment.Customer : await customersService.GetCustomerByIdAsync(payment.CustomerId);
+
+        string message = $"Guten Tag {customer.Name_de},\n\nwir haben Ihre Zahlung über {payment.TotalAmount:N2} € erfolgreich erhalten. Vielen Dank für Ihre Zusammenarbeit.\n\nالسلام عليكم {customer.Name_ar}،\n\nتم استلام المبلغ وقدره {payment.TotalAmount:N2} € بنجاح. شكراً لتعاونكم.";
+
+        var result = await whatsAppService.SendMassage(customer, message);
+        if (!result.Result)
+        {
+            await js.InvokeVoidAsync("alert", result.Message);
+        }
+
+        showContextMenu = false;
+    }
+    private async Task OnMap(Customers customer)
+    {
+        try
+        {
+            var (isValidCoordinates, hasAddress, fullAddress) = customersService.ValidateAndBuildMapAddress(customer);
+            if (!isValidCoordinates && !hasAddress)
+            {
+                await js.InvokeVoidAsync("alert", "Keine gültigen Koordinaten oder Adresse für diesen Kunden vorhanden.");
+                return;
+            }
+
+            await js.InvokeVoidAsync("mapRedirect.openMap", customer.Latitude, customer.Longitude, fullAddress);
+            showContextMenu = false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"OnMap Fehler OneTimePaymentPage: {ex.InnerException?.Message ?? ex.Message}");
+        }
+    }
+    private async Task OnPhone(string phoneNumber)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+            {
+                await js.InvokeVoidAsync("alert", "Keine Telefonnummer für diesen Kunden vorhanden.");
+                return;
+            }
+
+            await js.InvokeVoidAsync("phoneRedirect.openPhoneDialer", phoneNumber);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error redirecting to phone: {ex.Message}");
+        }
+		showContextMenu = false;
+    }
+    private async Task OnWhatsAppMessage(Customers customer)
+    {
+        var result = await whatsAppService.SendMassage(customer);
+        if (!result.Result)
+        {
+            await js.InvokeVoidAsync("alert", result.Message);
+        }
+        showContextMenu = false;
+    }
+    // UnexpectedPayment
+    private void newUnexpectedPayment()
+    {
+		selectedPayment = null!;
+		editOneTimePayment = null!;
+        IsOneTimePaymentProcessing = (true, "UnexpectedPayment");
+    }
+
+    private async Task SelectAllContent()
+    {
+        try
+        {
+            // um sicherzustellen, dass der Browser den Fokussierungsprozess abgeschlossen hat
+            await Task.Delay(10);
+            await js.InvokeVoidAsync("eval", "document.querySelector('.form-control:focus').select()");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Fehler beim Auswählen des Inhalts: {ex.Message}");
+        }
+    }
+    private void OnMainDiv()
+    {
+        // hide die Menu if sichtbar
+        showContextMenu = false;
+    }
+}

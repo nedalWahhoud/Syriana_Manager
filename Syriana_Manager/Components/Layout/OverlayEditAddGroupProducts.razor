@@ -1,0 +1,108 @@
+﻿@inject IStringLocalizer<Syriana_Manager.Components.Layout.PGruppeCatPage> L
+<div class="overlay">
+	<div class="standardOverlayForm" @onclick:stopPropagation="true">
+		<EditForm Model="@groupProduct" OnValidSubmit="SaveGroup">
+			<DataAnnotationsValidator />
+			<div class="overlayField">
+				<label>Name de</label>
+				<InputText class="form-control" @bind-Value="groupProduct.GroupName_de" />
+				<ValidationMessage For="@(() => groupProduct.GroupName_de)" />
+			</div>
+			<div class="overlayField">
+				<label>Name ar</label>
+				<InputText class="form-control" @bind-Value="groupProduct.GroupName_ar" />
+				<ValidationMessage For="@(() => groupProduct.GroupName_ar)" />
+			</div>
+			<div class="mt-3">
+				<button class="btn btn-primary me-2" disabled="@IsProcessing">
+					@if (IsProcessing)
+					{
+						<span class="spinner-border spinner-border-sm"
+						role="status"
+						aria-hidden="true"></span>
+					}
+					else
+					{
+						<span>@L["Save"]</span>
+					}
+				</button>
+				<button class="btn btn-secondary" @onclick="Cancel">@L["Cancel"]</button>
+			</div>
+		</EditForm>
+	</div>
+</div>
+
+@code {
+
+	[Parameter]
+	public GroupProducts groupProduct { get; set; } = new();
+	[Parameter]
+	public string action { get; set; } = string.Empty;
+	[Parameter]
+	public EventCallback<string> OnHandel { get; set; }
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			// scroll spreen
+			await js.InvokeVoidAsync("openFullscreen");
+		}
+	}
+	private bool IsProcessing = false;
+	private async void SaveGroup()
+	{
+		IsProcessing = true;
+		TrimItems();
+		if (action == "Add")
+		{
+			var result = await productGroupService.CreateGroupProduct(groupProduct);
+
+			if (result.Result)
+			{
+				groupProduct = null!;
+				await OnHandel.InvokeAsync(action);
+			}
+			else
+				await js.InvokeVoidAsync("window.alert", result.Message);
+		}
+		else
+		{
+			GroupProducts? currentGroup = productGroupService.DownloadedproductGroups.FirstOrDefault(c => c.Id == groupProduct.Id);
+			if (currentGroup != null)
+			{
+				bool isEdited = productGroupService.IsCategoryEdited(currentGroup, groupProduct);
+				if (isEdited)
+				{
+					var result = await productGroupService.UpdateGroupProduct(groupProduct);
+					if (result.Result)
+					{
+						groupProduct = new();
+						await OnHandel.InvokeAsync(action);
+					}
+					else
+						await js.InvokeVoidAsync("window.alert", result.Message);
+				}
+				else
+					await js.InvokeVoidAsync("window.alert", "Nichts hat sich geändert");
+			}
+			else
+				await js.InvokeVoidAsync("window.alert", "keine currentGroup gefunden");
+
+		}
+		IsProcessing = false;
+		StateHasChanged();
+	}
+	private void Cancel()
+	{
+		groupProduct = new();
+		OnHandel.InvokeAsync(action);
+	}
+	private void TrimItems()
+	{
+		if(groupProduct != null)
+		{
+			groupProduct.GroupName_de = groupProduct.GroupName_de?.Trim()!;
+			groupProduct.GroupName_ar = groupProduct.GroupName_ar?.Trim()!;
+		}
+	}
+}

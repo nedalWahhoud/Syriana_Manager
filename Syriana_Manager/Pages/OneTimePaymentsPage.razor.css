@@ -1,0 +1,7 @@
+﻿.Continer {
+    height: 100vh;
+    overflow-y: scroll;
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+}

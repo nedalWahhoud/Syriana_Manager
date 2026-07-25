@@ -1,0 +1,217 @@
+﻿@inject IStringLocalizer<Syriana_Manager.Components.Layout.OverlayEditAddCustomers> L
+<div class="overlay">
+	<div class="standardOverlayForm">
+		<EditForm Model="@customer" OnValidSubmit="Save">
+			<DataAnnotationsValidator />
+			<div class="overlayField">
+				<InputSelect class="form-control" @bind-Value="customer.DistributionLineId">
+					<option value="0">@L["SelectLine"]</option>
+					@foreach (var distributionLine in distributionLinesService.DownloadedDistributionLines)
+					{
+						<option value="@distributionLine.Id">@distributionLine.LineName</option>
+					}
+				</InputSelect>
+				<ValidationMessage For="@(() => customer.DistributionLineId)" />
+			</div>
+			<div class="overlayField">
+				<InputText class="form-control" @bind-Value="customer.Name_de" placeholder="@L["NameDe"]" />
+				<ValidationMessage For="@(() => customer.Name_de)" />
+			</div>
+			<div class="overlayField">
+				<InputText class="form-control" @bind-Value="customer.Name_ar" placeholder="@L["NameAr"]" />
+				<ValidationMessage For="@(() => customer.Name_ar)" />
+			</div>
+			<div class="overlayField">
+				<InputText class="form-control" @bind-Value="customer.Street" placeholder="@L["Address"]" />
+				<ValidationMessage For="@(() => customer.Street)" />
+			</div>
+			<div class="overlayField">
+				<InputText class="form-control" @bind-Value="customer.BuildingNumber" placeholder="@L["HouseNumber"]" />
+				<ValidationMessage For="@(() => customer.BuildingNumber)" />
+			</div>
+			<div class="overlayField">
+				<InputText class="form-control" @bind-Value="customer.PostalCode" placeholder="@L["PostalCode"]" />
+				<ValidationMessage For="@(() => customer.PostalCode)" />
+			</div>
+			<div class="overlayField">
+				<InputText class="form-control" @bind-Value="customer.City" placeholder="@L["City"]" />
+				<ValidationMessage For="@(() => customer.City)" />
+			</div>
+			<div class="overlayField">
+				<div class="input-group">
+					<span class="input-group-text customLatIcon">La</span>
+					<InputNumber TValue="double" class="form-control" @bind-Value="customer.Latitude" @onfocus="@(e => SelectAllContent())" />
+				</div>
+				<ValidationMessage For="@(() => customer.Latitude)" />
+			</div>
+			<div class="overlayField">
+				<div class="input-group">
+					<span class="input-group-text customLatIcon">Lo</span>
+					<InputNumber TValue="double" class="form-control" @bind-Value="customer.Longitude" @onfocus="@(e => SelectAllContent())" />
+				</div>
+				<ValidationMessage For="@(() => customer.Longitude)" />
+			</div>
+			<div class="overlayField">
+				<InputText class="form-control" @bind-Value="customer.PhoneNumber" placeholder="@L["Tel."]" />
+				<ValidationMessage For="@(() => customer.PhoneNumber)" />
+			</div>
+			<div class="overlayField">
+				<InputText class="form-control" @bind-Value="customer.Email" placeholder="@L["Email"]" />
+				<ValidationMessage For="@(() => customer.Email)" />
+			</div>
+			<div class="overlayField">
+				<InputText class="form-control" @bind-Value="customer.Notes_de" placeholder="@L["NoteDe"]" />
+				<ValidationMessage For="@(() => customer.Notes_de)" />
+			</div>
+			<div class="overlayField">
+				<InputText class="form-control" @bind-Value="customer.Notes_ar" placeholder="@L["NoteAr"]" />
+				<ValidationMessage For="@(() => customer.Notes_ar)" />
+			</div>
+			<div class="overlayField">
+				<div class="d-flex align-items-center gap-3">
+					<div class="flex-grow-1">
+						<InputNumber TValue="int" min="1" class="form-control" @bind-Value="customer.StopNumber" @onfocus="@(e => SelectAllContent())" placeholder="Haltestellennummer" />
+					</div>
+					<div class="form-check">
+						<InputCheckbox class="form-check-input" @bind-Value="customer.shouldStopnummerShift" id="shiftCheck" />
+						<label class="form-check-label" for="shiftCheck">
+							@L["ShouldPostpone"]
+						</label>
+					</div>
+				</div>
+				<ValidationMessage For="@(() => customer.StopNumber)" />
+			</div>
+			<div class="overlayField">
+				<InputText placeholder="@L["PIN"]" maxlength="4" pattern="\d{4}" title="PIN muss genau 4 Zahlen sein" class="form-control" @bind-Value="customer.PIN" />
+				<ValidationMessage For="@(() => customer.PIN)" />
+			</div>
+			<div class="mt-3">
+				<button class="btn btn-primary me-2" disabled="@customerProcess.IsProcessing">
+					@if (customerProcess.IsProcessing)
+					{
+						<span class="spinner-border spinner-border-sm"
+						role="status"
+						aria-hidden="true"></span>
+					}
+					else
+					{
+						<span>@L["Save"]</span>
+					}
+				</button>
+				<button class="btn btn-secondary" @onclick="Cancel">@L["Cancel"]</button>
+			</div>
+		</EditForm>
+	</div>
+</div>
+
+@code {
+	[Parameter]
+	public Customers customer { get; set; } = new Customers();
+	[Parameter]
+	public string action { get; set; } = string.Empty;
+	[Parameter]
+	public EventCallback<(string action,CustomerProcess customerProcess)> OnHandel { get; set; }
+	private CustomerProcess customerProcess = new();
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			// scroll spreen
+			await js.InvokeVoidAsync("openFullscreen");
+		}
+	}
+	private async void Save()
+	{
+		customerProcess = new CustomerProcess
+			{
+				IsProcessing = true
+			};
+		TrimItems();
+		if (action == "Add")
+		{
+			var result = await customersService.AddCustomer(customer);
+			customerProcess.Result = result;
+			if (result.Result)
+			{
+				// Verteilungslinie zuweisen
+				customer.DistributionLine = distributionLinesService.DownloadedDistributionLines
+					.Find(dl => dl.Id == customer.DistributionLineId)
+					?? await distributionLinesService.GetDistributionLineByIdAsync(customer.DistributionLineId);
+
+				customer = null!;
+			}
+			else
+				await js.InvokeVoidAsync("window.alert", result.Message);
+
+			customerProcess.IsProcessing = false;
+			await OnHandel.InvokeAsync((action, customerProcess));
+
+		}
+		else
+		{
+			// wenn category editiert wurde
+			Customers? currentCustomer = customersService.DownloadedCustomers.FirstOrDefault(c => c.Id == customer.Id);
+			if (currentCustomer != null)
+			{
+				bool isEdited = customersService.IsEdited(currentCustomer, customer);
+				if (isEdited)
+				{
+					var result = await customersService.UpdateCustomer(customer);
+					customerProcess.Result = result;
+					if (result.Result)
+					{
+						customer = null!;
+						customerProcess.IsProcessing = false;
+						await OnHandel.InvokeAsync((action,customerProcess));
+					}
+					else
+						await js.InvokeVoidAsync("window.alert", result.Message);
+				}
+				else
+					await js.InvokeVoidAsync("window.alert", "Nichts hat sich geändert");
+			}
+			else
+				await js.InvokeVoidAsync("window.alert", "keine currentCategory gefunden");
+		}
+
+		customerProcess.IsProcessing = false;
+		StateHasChanged();
+	}
+	private void Cancel()
+	{
+		customer = new Customers();
+		OnHandel.InvokeAsync(("Cancel", null!));
+	}
+
+	private async Task SelectAllContent()
+	{
+		try
+		{
+			// um sicherzustellen, dass der Browser den Fokussierungsprozess abgeschlossen hat
+			await Task.Delay(10);
+			await js.InvokeVoidAsync("eval", "document.querySelector('.form-control:focus').select()");
+		}
+		catch(Exception ex)
+		{
+			Console.WriteLine($"Fehler beim Auswählen des Inhalts: {ex.Message}");
+		}
+	}
+
+	private void TrimItems()
+	{
+		if (customer != null)
+		{
+			customer.Name_de = customer.Name_de?.Trim()!;
+			customer.Name_ar = customer.Name_ar?.Trim()!;
+			customer.Street = customer.Street?.Trim()!;
+			customer.BuildingNumber = customer.BuildingNumber?.Trim()!;
+			customer.PostalCode = customer.PostalCode?.Trim()!;
+			customer.City = customer.City?.Trim()!;
+			customer.PhoneNumber = customer.PhoneNumber?.Trim()!;
+			customer.Email = customer.Email?.Trim();
+			customer.Notes_de = customer.Notes_de?.Trim();
+			customer.Notes_ar = customer.Notes_ar?.Trim();
+			customer.PIN = customer.PIN?.Trim();
+		}
+	}
+}

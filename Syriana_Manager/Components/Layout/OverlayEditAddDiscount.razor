@@ -1,0 +1,300 @@
+﻿@* Rabattcode *@
+@inject IStringLocalizer<Syriana_Manager.Components.Layout.Discountcode> L
+@if (action.ifdicountCode)
+{
+    <div class="overlay">
+        <div class="standardOverlayForm">
+            <EditForm Model="@discountCode" OnValidSubmit="OnSave">
+                <DataAnnotationsValidator />
+                <div class="mb-3">
+                    <div class="input-group">
+                        <InputText class="form-control" @bind-Value="discountCode.Code" placeholder="@L["Code"]" />
+                        <button class="btn btn-outline-primary" type="button" @onclick="() => OnGenerate(true)">
+                            <i class="fas fa-random"></i>
+                        </button>
+                    </div>
+                    <ValidationMessage For="@(() => discountCode.Code)" />
+                </div>
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text">@(discountCode.DiscountType == DiscountType.FixedAmount ? L["Amount"] : L["Percent"])</span>
+                        <InputNumber class="form-control" @bind-Value="discountCode.DiscountAmount" @onfocus="@(e => SelectAllContent())" />
+                    </div>
+                    <ValidationMessage For="@(() => discountCode.DiscountAmount)" />
+                </div>
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text">@L["Type"]</span>
+                        <InputSelect @bind-Value="discountCode.DiscountType" class="form-select">
+                            <option value="@DiscountType.Percentage">@L["Percent"] (%)</option>
+                            <option value="@DiscountType.FixedAmount">@L["Amount"] (€)</option>
+                        </InputSelect>
+                    </div>
+                    <ValidationMessage For="@(() => discountCode.DiscountType)" />
+                </div>
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text">@L["UsageLimit"]</span>
+                        <InputNumber class="form-control" @bind-Value="discountCode.UsageLimit" @onfocus="@(e => SelectAllContent())" />
+                    </div>
+                    <ValidationMessage For="@(() => discountCode.UsageLimit)" />
+                </div>
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text">@L["StartDate"]</span>
+                        <InputDate class="form-control" @bind-Value="discountCode.StartDate" />
+                    </div>
+                    <ValidationMessage For="@(() => discountCode.StartDate)" />
+                </div>
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text">@L["EndDate"]</span>
+                        <InputDate class="form-control" @bind-Value="discountCode.EndDate" />
+                    </div>
+                    <ValidationMessage For="@(() => discountCode.EndDate)" />
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex align-items-center">
+                        <span class="input-group-text @(IsArabic ? "ms-4" : "me-4")">@L["IsActive"]</span>
+                        <InputCheckbox class="form-check-input" @bind-Value="discountCode.IsActive" />
+                    </div>
+                </div>
+                <div class="d-flex flex-column gap-1">
+                    <button type="submit" class="btn btn-primary">@L["Save"]</button>
+                    <button type="button" class="btn btn-secondary" @onclick="Cancel">@L["Cacenl"]</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+@* Rabatt kategorie *@
+@if (!action.ifdicountCode)
+{
+    <div class="overlay">
+        <div class="standardOverlayForm">
+            <EditForm Model="@discountCategory" OnValidSubmit="OnSave">
+                <DataAnnotationsValidator />
+                <div class="mb-3">
+                    <div class="input-group">
+                        <InputText class="form-control" @bind-Value="discountCategory.Code" placeholder="@L["Code"]" />
+                        <button class="btn btn-outline-primary" type="button" @onclick="() => OnGenerate(false)">
+                            <i class="fas fa-random"></i>
+                        </button>
+                    </div>
+                    <ValidationMessage For="@(() => discountCategory.Code)" />
+                </div>
+                <div class="mb-3">
+                    <InputSelect class="form-control" @bind-Value="discountCategory.CategoriesId">
+                        <option value="0">@L["SelectCategory"]</option>
+                        @foreach (var category in categories ?? new List<Categories>())
+                        {
+                            <option value="@category.Id">@category.Name_de</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => discountCategory.CategoriesId)" />
+                </div>
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text">@(discountCategory.DiscountType == DiscountType.FixedAmount ? L["Amount"] : L["Percent"])</span>
+                        <InputNumber class="form-control" @bind-Value="discountCategory.DiscountAmount" @onfocus="@(e => SelectAllContent())" />
+                    </div>
+                    <ValidationMessage For="@(() => discountCategory.DiscountAmount)" />
+                </div>
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text">@L["Type"]</span>
+                        <InputSelect @bind-Value="discountCategory.DiscountType" class="form-select">
+                            <option value="@DiscountType.Percentage">@L["Percent"] (%)</option>
+                            <option value="@DiscountType.FixedAmount">@L["Amount"] (€)</option>
+                        </InputSelect>
+                    </div>
+                    <ValidationMessage For="@(() => discountCategory.DiscountType)" />
+                </div>
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text">@L["UsageLimit"]</span>
+                        <InputNumber class="form-control" @bind-Value="discountCategory.UsageLimit" @onfocus="@(e => SelectAllContent())" />
+                    </div>
+                    <ValidationMessage For="@(() => discountCategory.UsageLimit)" />
+                </div>
+
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text">@L["StartDate"]</span>
+                        <InputDate class="form-control" @bind-Value="discountCategory.StartDate" />
+                    </div>
+                    <ValidationMessage For="@(() => discountCategory.StartDate)" />
+                </div>
+
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text">@L["EndDate"]</span>
+                        <InputDate class="form-control" @bind-Value="discountCategory.EndDate" />
+                    </div>
+                    <ValidationMessage For="@(() => discountCategory.EndDate)" />
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex align-items-center">
+                        <span class="input-group-text @(IsArabic ? "ms-4" : "me-4")">@L["IsActive"]</span>
+                        <InputCheckbox class="form-check-input" @bind-Value="discountCategory.IsActive" />
+                    </div>
+                </div>
+                <div class="d-flex flex-column gap-1">
+                    <button type="submit" class="btn btn-primary">@L["Save"]</button>
+                    <button type="submit" class="btn btn-secondary" @onclick="Cancel">@L["Cancel"]</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+
+}
+@code {
+    [Parameter]
+    public DiscountCategory discountCategory { get; set; } = new();
+    [Parameter]
+    public DiscountCodes discountCode { get; set; } = new();
+    [Parameter]
+    public (bool ifdicountCode, bool ifAdd) action { get; set; } = (false, false);
+    [Parameter]
+    public EventCallback<string> OnHandel { get; set; }
+
+    // category
+    private List<Categories>? categories = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // get default image for add action, and Initialize die ProductDiscount
+        if (!action.ifdicountCode)
+        {
+            categories ??= await categoryService.GetAllCategoriesAsync();
+        }
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // scroll spreen
+            await js.InvokeVoidAsync("openFullscreen");
+        }
+    }
+    private async Task OnSave()
+    {
+        TrimItems();
+
+        if (action.ifdicountCode)
+        {
+            if (action.ifAdd)
+            {
+                var result = await discountService.AddDiscountCode(discountCode);
+                if (result.Result)
+                {
+                    discountCode = new DiscountCodes(); // Reset the form
+                }
+                else
+                    await js.InvokeVoidAsync("window.alert", result.Message!);
+            }
+            else
+            {
+                DiscountCodes currentProduct = discountService.DownloadedDiscountCodes.Find(p => p.Id == discountCode.Id) ?? new();
+                bool isEdited = discountService.IsEditedDiscountCode(currentProduct, discountCode);
+                if (!isEdited)
+                {
+                    await js.InvokeVoidAsync("window.alert", "Nichts geändert");
+                    return;
+                }
+
+                var result = await discountService.UpdateDiscountCode(discountCode);
+                if (result.Result)
+                {
+                    // Code aktualisiert, keine weiteren Aktionen erforderlich
+                }
+                else
+                {
+                    await js.InvokeVoidAsync("window.alert", result.Message!);
+                }
+            }
+        }
+        else
+        {
+            if (action.ifAdd)
+            {
+                var result = await discountService.AddDiscountCategory(discountCategory);
+                if (result.Result)
+                {
+                    discountCategory = new DiscountCategory(); // Reset the form
+                }
+                else
+                {
+                    await js.InvokeVoidAsync("window.alert", result.Message!);
+                }
+            }
+            else
+            {
+                DiscountCategory currentProduct = discountService.DownloadedDiscountCategory.Find(p => p.Id == discountCategory.Id) ?? new();
+                bool isEdited = discountService.IsEditedDiscountCategory(currentProduct, discountCategory);
+                if (!isEdited)
+                {
+                    await js.InvokeVoidAsync("window.alert", "Nichts geändert");
+                    return;
+                }
+
+                var result = await discountService.UpdateDiscountCategory(discountCategory);
+                if (result.Result)
+                {
+                    // Code aktualisiert, keine weiteren Aktionen erforderlich
+                }
+                else
+                {
+                    await js.InvokeVoidAsync("window.alert", result.Message!);
+                }
+
+            }
+        }
+
+        if (action.ifAdd)
+            await OnHandel.InvokeAsync("Add");
+        else
+            await OnHandel.InvokeAsync("Edit");
+    }
+    public void OnGenerate(bool ifDiscountCode)
+    {
+        var randomCode = Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper();
+
+        if (ifDiscountCode)
+        {
+            discountCode.Code = randomCode;
+        }
+        else
+        {
+            discountCategory.Code = randomCode;
+        }
+    }
+
+    private void Cancel()
+    {
+        OnHandel.InvokeAsync("Cancel");
+    }
+    // Den gesamten Inhalt im Eingabefeld auswählen, wenn der Fokus
+    private async Task SelectAllContent()
+    {
+        try
+        {
+            // um sicherzustellen, dass der Browser den Fokussierungsprozess abgeschlossen hat
+            await Task.Delay(10);
+            await js.InvokeVoidAsync("eval", "document.querySelector('.form-control:focus').select()");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error selecting input text: {ex.Message}");
+        }
+    }
+
+    private void TrimItems()
+    {
+        if (action.ifdicountCode)
+            discountCode.Code = discountCode.Code?.Trim()!;
+        else
+            discountCategory.Code = discountCategory.Code?.Trim()!;
+    }
+}

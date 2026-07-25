@@ -1,0 +1,60 @@
+﻿html, body {
+    overflow: hidden !important;
+    height: 100% !important;
+    position: fixed !important;
+    width: 100% !important;
+    touch-action: none;
+    -webkit-overflow-scrolling: none;
+    touch-action: none; /* Berührungsinteraktion für Bewegungen deaktiviert */
+    overscroll-behavior: none; /* Verhindert Rückprall an den Kanten */
+}
+.buttonsDiv {
+    display: flex;
+    flex-direction: row;
+}
+.dropdownListsDiv {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    justify-content:center;
+}
+.DropdownList {
+    border-radius: 6px;
+    border: 1px solid #cccccc;
+    font-size: 14px;
+    cursor: pointer;
+    height: 31px;
+    max-width:100px;
+}
+    .DropdownList:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 3px rgba(0,123,255,0.25);
+    }
+.searchDiv {
+    display: flex;
+    max-width: 200px;
+    align-items:center;
+}
+    .searchDiv input {
+        border: none;
+        font-size: 14px;
+    }
+
+.DebtAndPaymentColor {
+    background: linear-gradient(180deg, #cff4fc 40%, #f8d7da 60%) ;
+    position: relative;
+}
+
+    .DebtAndPaymentColor td {
+        background: transparent ;
+        color: #212529 ;
+        vertical-align: middle;
+        border-top: none ;
+        border-bottom: none ;
+    }
+
+@media screen and (max-width: 767px) {
+    .searchDiv input[type="text"].form-control {
+        font-size: 16px;
+    }
+}

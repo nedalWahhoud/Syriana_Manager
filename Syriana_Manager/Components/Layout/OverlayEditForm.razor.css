@@ -1,0 +1,12 @@
+﻿.imageUpload {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.previewImage {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #cccccc;
+}

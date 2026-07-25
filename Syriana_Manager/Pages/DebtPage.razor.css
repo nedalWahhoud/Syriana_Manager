@@ -1,0 +1,18 @@
+﻿@media (max-width: 768px) {
+    .tableResponsive {
+        border-radius: 10px;
+        overflow-x: auto;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    /* Button */
+    .btnMobileSmall {
+        padding: 5px 15px !important;
+        font-size: 12px !important;
+        min-height: 35px;
+    }
+
+        .btnMobileSmall .spinner-border {
+            width: 12px;
+            height: 12px;
+        }
+}

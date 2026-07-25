@@ -1,0 +1,122 @@
+﻿@inject IStringLocalizer<Syriana_Manager.Components.Layout.PGruppeCatPage> L
+<div class="overlay">
+	<div class="standardOverlayForm">
+		<EditForm Model="@category" OnValidSubmit="Save">
+			<DataAnnotationsValidator />
+			<div class="overlayField">
+				<label>Name de</label>
+				<InputText class="form-control" @bind-Value="category.Name_de" />
+				<ValidationMessage For="@(() => category.Name_de)" />
+			</div>
+			<div class="overlayField">
+				<label>Name ar</label>
+				<InputText class="form-control" @bind-Value="category.Name_ar" />
+				<ValidationMessage For="@(() => category.Name_ar)" />
+			</div>
+			<div class="overlayField">
+				<label>@L["18+"]</label>
+		    	<InputCheckbox @bind-Value="category.Requires18Plus" />
+				<ValidationMessage For="@(() => category.Requires18Plus)" />
+			</div>
+			<div class="overlayField">
+				<label>@L["IsActive"]</label>
+				<InputCheckbox @bind-Value="category.IsAktiv" />
+				<ValidationMessage For="@(() => category.IsAktiv)" />
+			</div>
+			<div class="mt-3">
+				<button class="btn btn-primary me-2" disabled="@IsProcessing">
+					@if (IsProcessing)
+					{
+						<span class="spinner-border spinner-border-sm"
+						role="status"
+						aria-hidden="true"></span>
+					}
+					else
+					{
+						<span>@L["Save"]</span>
+					}
+				</button>
+				<button class="btn btn-secondary" @onclick="Cancel">@L["Cancel"]</button>
+			</div>
+		</EditForm>
+	</div>
+</div>
+
+@code {
+	[Parameter]
+	public Categories category { get; set; } = new Categories();
+	[Parameter]
+	public string action { get; set; } = string.Empty;
+	[Parameter]
+	public EventCallback<string> OnHandel { get; set; }
+	private bool IsProcessing = false;
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			// scroll spreen
+			await js.InvokeVoidAsync("openFullscreen");
+		}
+	}
+	private async void Save()
+	{
+		IsProcessing = true;
+
+		TrimItems();
+
+		if (action == "Add")
+		{
+			var result = await categoryService.CreateCategory(category);
+			if (result.Result)
+			{
+				category = null!;
+				await OnHandel.InvokeAsync(action);
+			}
+			else
+				await js.InvokeVoidAsync("window.alert", result.Message);
+		}
+		else
+		{
+			// wenn category editiert wurde
+			Categories? currentCategory = categoryService.DownloadedCategories.FirstOrDefault(c => c.Id == category.Id);
+			if (currentCategory != null)
+			{
+				bool isEdited = categoryService.IsCategoryEdited(currentCategory, category);
+				if (isEdited)
+				{
+					var result = await categoryService.UpdateCategoryAsync(category);
+					if (result.Result)
+					{
+						category = null!;
+						await OnHandel.InvokeAsync(action);
+					}
+					else
+						await js.InvokeVoidAsync("window.alert", result.Message);
+				}
+				else
+					await js.InvokeVoidAsync("window.alert", "Nichts hat sich geändert");
+			}
+			else
+				await js.InvokeVoidAsync("window.alert", "keine currentCategory gefunden");
+		}
+
+		IsProcessing = false;
+		StateHasChanged();
+	}
+	private void Cancel()
+	{
+		category = new Categories();
+		OnHandel.InvokeAsync(action);
+
+	}
+
+	private void TrimItems()
+	{
+		if(category != null)
+		{
+			category.Name_de = category.Name_de?.Trim()!;
+			category.Name_ar = category.Name_ar?.Trim()!;
+		}
+	}
+}

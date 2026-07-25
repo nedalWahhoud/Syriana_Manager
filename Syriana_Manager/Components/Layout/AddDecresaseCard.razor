@@ -1,0 +1,63 @@
+﻿<div class="productsCart">
+    <button class="btn btnProductDecrease"
+            @onclick="() => CartChangedDecrease(ProductId)">
+        ➖
+    </button>
+
+    <input type="number"
+           value="@cartService.GetQuantityOfProduct(ProductId)"
+           Min="0" Max="6"
+           class="form-control"
+           disabled />
+    <button class="btn @(cartService.IsProductAdded(ProductId)  ? "btnProductAdded" : "btnProduct")"
+            @onclick="() => CartChangedAdd(ProductId)">
+        @(cartService.IsProductAdded(ProductId) ? $"➕" : "🛒")
+    </button>
+</div>
+<label class="form-label" style="color:red;">@textMessage</label>
+@code {
+    [Parameter]
+    public int ProductId { get; set; }
+    [Parameter]
+    public bool IsCartLayout { get; set; } = false;
+
+    [Parameter]
+    public EventCallback<int> OnQuantityChanged { get; set; }
+    // change quantity
+    private string? textMessage;
+    private async Task CartChangedAdd(int productId)
+    {
+        textMessage = await cartService.AddToCart(productId);
+
+        textMessage = textMessage != null ? textMessage : null!;
+        // send event to parent component to update the cart layout (price and if delete )
+        //if (IsCartLayout)
+      //  {
+            await OnQuantityChanged.InvokeAsync(productId);
+       // }
+    }
+    private async Task CartChangedDecrease(int productId)
+    {
+        if (IsCartLayout)
+        {
+            CartItem cartItem = cartService.GetCartItemByProductId(productId);
+            if (cartItem != null && cartItem.Quantity == 1)
+            {
+                bool confirmed = await js.InvokeAsync<bool>("confirm", "Sind Sie sicher, dass Sie das Produkt aus dem Warenkorb entfernen möchten?");
+                if (!confirmed)
+                {
+                    return;
+                }
+            }
+        }
+        textMessage = await cartService.DecreaseFromCart(productId);
+
+        textMessage = textMessage != null ? textMessage : null!;
+
+        // send event to parent component to update the cart layout (price and if delete )
+      //  if (IsCartLayout)
+      //  {
+            await OnQuantityChanged.InvokeAsync(productId);
+        //}
+    }
+}

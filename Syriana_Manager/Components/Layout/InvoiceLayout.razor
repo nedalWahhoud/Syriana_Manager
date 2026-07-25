@@ -1,0 +1,255 @@
+﻿@inject IStringLocalizer<Syriana_Manager.Components.Layout.InvoiceLayout> L
+@if (invoice != null)
+{
+	<div class="overlay">
+		<div class="overlayFormInvoice">
+			<div class="header">
+				<button class="btn btn-close" @onclick="CloseInvoice"></button>
+				<div class="dropdown">
+					<button class="btn btn-outline-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+						⋮
+					</button>
+					<ul class="dropdown-menu">
+						<li style="cursor:pointer"><a class="dropdown-item" @onclick="() => OnSaveInvoice(invoice)">@L["Save"]</a></li>
+					</ul>
+				</div>
+			</div>
+			<div id="InvoiceBox" class="InvoiceBox">
+				<div class="InvoiceContent">
+					<div class="InvoiceLogo">
+						<img src="@ProjectInfo.LogoUrl" alt="@ProjectInfo.Name" style="max-width: 140px; height: 140px;" />
+					</div>
+					<div class="InvoiceFirstPart">
+						<div class="InvoiceAddress">
+							<span class="SenderAddress">@ProjectInfo.Name @ProjectInfo.Address</span>
+							<span>@invoice.CurrentOrder.Address?.FirstName @invoice.CurrentOrder.Address?.LastName</span>
+							<span>@invoice.CurrentOrder.Address?.Street</span>
+							<span>@invoice.CurrentOrder.Address?.ZipCode @invoice.CurrentOrder.Address?.City</span>
+						</div>
+						<div class="InvoiceContact">
+							<span>Website: @ProjectInfo.Website</span>
+							<span>E-mail: @ProjectInfo.Email</span>
+							<span>Tel.: @ProjectInfo.Phone</span>
+						</div>
+					</div>
+					<div class="InvoiceSecondPart">
+						<span>Rechnung</span>
+						<p class="InvoiceDetails">
+							<span><label>Rechnungsnummer</label>@invoice.InvoceeNumber</span>
+							<span><label>Rechnungsdatum</label>@DateTime.Today.ToString("dd.MM.yyyy")</span>
+							<span><label>Ordersdatum</label>@invoice.CurrentOrder.OrderDate.ToString("dd.MM.yyyy HH:mm")</span>
+						</p>
+					</div>
+					<div class="OrderDetails">
+						<table class="tableOrderDetails">
+							<thead>
+								<tr>
+									<th>Pos.</th>
+									<th>Produkt</th>
+									<th>Menge</th>
+									<th>Einzelpreis</th>
+									<th>Steuer</th>
+									<th>Preis</th>
+								</tr>
+							</thead>
+							<tbody>
+								@{
+									var culture = new System.Globalization.CultureInfo("de-DE");
+									for (int i = 0; i < invoice.CurrentOrder.OrderItems.Count; i++)
+									{
+										var item = invoice.CurrentOrder.OrderItems[i];
+										var itemPreis = item.UnitPrice * item.Quantity;
+										<tr>
+											<td>@(i + 1)</td>
+											<td>@(item.Product?.Name_de ?? "Fehler")</td>
+											<td>@item.Quantity</td>
+											<td>@item.UnitPrice.ToString("C", culture)</td>
+											<td>@(item.Product?.TaxRate?.Rate != null ? item.Product.TaxRate.Rate : "")</td>
+											<td>@(itemPreis.ToString("C", culture))</td>
+										</tr>
+									}
+									@* Preis vor Rabbat *@
+									if (invoice.CurrentOrder.DiscountCode != null || invoice.CurrentOrder.DiscountCategory != null)
+									{
+										<tr style="border-top: 1px solid #cccccc;">
+											<td colspan="5" style="padding-top:20px;" class="text-end"><strong>Preis vor Rabatt:</strong></td>
+											<td colspan="1" style="padding-top:20px;">@discountDetails.PriceBeforeDiscount.ToString("C", culture)</td>
+										</tr>
+									}
+									@* Rabbat *@
+									if (invoice.CurrentOrder.DiscountCode != null)
+									{
+										<tr style="border-top: 1px solid #cccccc;">
+											<td colspan="5" style="padding-top:20px;" class="text-end"><strong>Rabatt-@discountDetails.CategoryName:</strong></td>
+											<td colspan="1" style="padding-top:20px;">@($"{discountDetails.DiscountPercentage}{(discountDetails.DiscountType == DiscountType.Percentage ? "%" : "€")} ({discountDetails.DiscountValue.ToString("C", culture)})")</td>
+										</tr>
+									}
+									else if (invoice.CurrentOrder.DiscountCategory != null)
+									{
+										<tr style="border-top: 1px solid #cccccc;">
+											<td colspan="5" style="padding-top:20px; padding-bottom:10px;" class="text-end"><strong>Rabatt-@discountDetails.CategoryName:</strong></td>
+											<td colspan="1" style="padding-top:20px; padding-bottom:10px;">@($"{discountDetails.DiscountPercentage}{(discountDetails.DiscountType == DiscountType.Percentage ? "%" : "€")}({discountDetails.DiscountValue.ToString("C", culture)})")</td>
+										</tr>
+									}
+									else
+									{
+										<tr style="border-top: 1px solid #cccccc;">
+											<td colspan="5" style="padding-top:20px; padding-bottom:10px;" class="text-end"><strong>Rabatt:</strong></td>
+											<td colspan="1" style="padding-top:20px; padding-bottom:10px;">0 €</td>
+										</tr>
+									}
+
+									@* Preis nach Rabbat *@
+									if (invoice.CurrentOrder.DiscountCode != null || invoice.CurrentOrder.DiscountCategory != null)
+									{
+										<tr>
+											<td colspan="5" class="text-end"><strong>Preis nach Rabatt</strong></td>
+											<td colspan="1">@discountDetails.PriceAfterDiscount.ToString("C", culture)</td>
+										</tr>
+									}
+									@* Versandkosten *@
+									<tr>
+										<td colspan="5" class="text-end"><strong>Versandskosten</strong></td>
+										<td colspan="1">@priceSummary.ShippingCost.ToString("C", culture)</td>
+									</tr>
+									@* Gesamtbrutto *@
+									<tr>
+										<td colspan="5" class="text-end"><strong>Gesamtbrutto</strong></td>
+										<td colspan="1">@priceSummary.TotalGross.ToString("C", culture)</td>
+									</tr>
+									@* Steuer *@
+									<tr>
+										<td colspan="5" class="text-end"><strong>MwSt. 19% von @((Tax19.BaseAmount).ToString("C", culture))  @(Tax19.ShippingPart > 0 ? "+" + Tax19.ShippingPart.ToString("C", culture) : string.Empty)</strong></td>
+										<td colspan="1">@((Tax19.TaxAmount + Tax19.TaxShippingAmount).ToString("C", culture))</td>
+									</tr>
+									<tr>
+										<td colspan="5" class="text-end"><strong>MwSt. 7% von @Tax7.BaseAmount.ToString("C", culture)  @(Tax7.ShippingPart > 0 ? "+" + Tax7.ShippingPart.ToString("C", culture) : string.Empty)</strong></td>
+										<td colspan="1">@((Tax7.TaxAmount + Tax7.TaxShippingAmount).ToString("C", culture))</td >
+									</tr>
+									@* Netto *@
+									<tr>
+										<td colspan="5" style="padding-top:10px;" class="text-end"><strong>Gesamtnetto</strong></td>
+										<td colspan="1" style="padding-top:10px;">@priceSummary.TotalNet.ToString("C", culture)</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				</div>
+				<div class="OrderFooter">
+					<p class="RightPart">
+						<span>@ProjectInfo.Name</span>
+						<span>@ProjectInfo.Address</span>
+						<span>@($"Steuernummer: {ProjectInfo.Steuernummer}")</span>
+						<span>@($"USt-IdNr.: {ProjectInfo.UStIdNr}")</span>
+					</p>
+					@for (int i = 0; i < @invoiceService.DownloadedBankTransferDetails.Count; i++)
+					{
+						<p class="LeftPart">
+							<span>@invoiceService.DownloadedBankTransferDetails[i].AccountHolderName</span>
+							<span>@invoiceService.DownloadedBankTransferDetails[i].BankName</span>
+							<span>@invoiceService.DownloadedBankTransferDetails[i].IBAN</span>
+							<span>@invoiceService.DownloadedBankTransferDetails[i].BIC</span>
+						</p>
+					}
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+@code {
+	[Parameter]
+	public Invoice invoice { get; set; } = null!;
+	[Parameter]
+	public EventCallback<string> OnHandel { get; set; }
+
+	private TaxDetail Tax19 { get; set; } = new();
+	private TaxDetail Tax7 { get; set; } = new();
+	private PriceSummary priceSummary { get; set; } = new();
+	private DiscountDetails discountDetails { get; set; } = new();
+	protected override void OnParametersSet()
+	{
+		if (invoice != null)
+		{
+			// Rabbatt berechnen
+			if (invoice.CurrentOrder.DiscountCode != null || invoice.CurrentOrder.DiscountCategory != null)
+			{
+				discountDetails.PriceBeforeDiscount = invoiceService.GetTotalPriceBeforeDiscount(invoice.CurrentOrder);
+				discountDetails.PriceAfterDiscount = invoiceService.GetTotalPriceAfterDiscount(invoice.CurrentOrder);
+
+				if (invoice.CurrentOrder.DiscountCode != null)
+				{
+					var details = invoiceService.GetDetailsDiscountCode(invoice.CurrentOrder);
+					discountDetails.CategoryName = "Auf alle";
+					discountDetails.DiscountPercentage = details.DiscountPercentage;
+					discountDetails.DiscountValue = details.DiscountValue;
+					discountDetails.DiscountType = details.DiscountType;
+				}
+				else if (invoice.CurrentOrder.DiscountCategory != null)
+				{
+					var details = invoiceService.GetDetailsDiscountCategory(invoice.CurrentOrder);
+					discountDetails.CategoryName = details.categoryName;
+					discountDetails.DiscountPercentage = details.DiscountPercentage;
+					discountDetails.DiscountValue = details.DiscountValue; 
+					discountDetails.DiscountType = details.DiscountType;
+				}
+			}
+
+			priceSummary.ShippingCost = invoice.CurrentOrder.ShippingProviders?.PublicShippingCost ?? 0;
+			priceSummary.TotalGross = invoice.CurrentOrder.TotalPrice + (invoice.CurrentOrder.ShippingProviders?.PublicShippingCost ?? 0);
+
+			// 19% MwSt. berechnen
+			Tax19.Rate = 19;
+			Tax19.BaseAmount = invoiceService.GetTotalPriceByTaxRate(invoice.CurrentOrder, Tax19.Rate);
+			// 7% MwSt. berechnen
+			Tax7.Rate = 7;
+			Tax7.BaseAmount = invoiceService.GetTotalPriceByTaxRate(invoice.CurrentOrder, Tax7.Rate);
+			// Versandkostensteuer berechnen
+			if (priceSummary.ShippingCost > 0)
+			{
+				var TaxShipping = invoiceService.GetShippingTax(priceSummary.ShippingCost, Tax7.NetAmount, Tax19.NetAmount);
+				Tax19.ShippingPart = TaxShipping.shippingPart19;
+				Tax7.ShippingPart = TaxShipping.shippingPart7;
+			}
+
+			// Netto
+			priceSummary.TotalNet = priceSummary.TotalGross - ((Tax19.TaxAmount + Tax19.TaxShippingAmount) + (Tax7.TaxAmount + Tax7.TaxShippingAmount));
+		}
+	}
+
+	private async Task CloseInvoice()
+	{
+		invoice = null!;
+
+		await OnHandel.InvokeAsync("close");
+	}
+	private async Task OnSaveInvoice(Invoice invoice)
+	{
+		try
+		{
+			byte[] bytes = await invoiceService.InvoicePdfGeneration(invoice, priceSummary, Tax7, Tax19, discountDetails);
+
+			String base64 = Convert.ToBase64String(bytes);
+			//var url = $"data:application/pdf;base64,{base64}";
+
+			await js.InvokeVoidAsync("eval", $@"
+                 const byteCharacters = atob('{base64}');
+                 const byteNumbers = new Array(byteCharacters.length);
+                 for (let i = 0; i < byteCharacters.length; i++) {{
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                 }}
+                 const byteArray = new Uint8Array(byteNumbers);
+                 const blob = new Blob([byteArray], {{ type: 'application/pdf' }});
+                 const blobUrl = URL.createObjectURL(blob);
+                 window.open(blobUrl, '_blank');");
+
+			await OnHandel.InvokeAsync("save");
+		}
+		catch (Exception ex)
+		{
+			_ = js.InvokeVoidAsync("window.alert", $"Fehler beim Speichern der Rechnung: {ex.Message}");
+		}
+	}
+}
+
