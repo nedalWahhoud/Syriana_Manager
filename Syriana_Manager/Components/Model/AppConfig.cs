@@ -13,7 +13,7 @@
         public const string WebRequestProductImagePath = "api/ShareStorage";
         public const string GoogleApiUrl = "https://localhost:7250/api/users/google-login";
 #else
-        public const string ApiBaseUrl =  "http://localhost:2030";
+        public const string ApiBaseUrl =  "https://syriana-supermarkt.de/"; /* in jede Request schreiben wir api und so wird http://217.154.152.128:1081/api und in Server eine Proxy to localhost:2030*/
         public static Uri ApiUri => new Uri(ApiBaseUrl);
         public const string Domin  = "https://syriana-supermarkt.de";
         public const string ProductImagesproxy  = "ProductImages";

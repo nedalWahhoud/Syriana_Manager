@@ -15,7 +15,6 @@ using Syriana_Manager.Components.ProductGroupF;
 using Syriana_Manager.Components.ProductsF;
 using Syriana_Manager.Components.SupplierF;
 using Syriana_Manager.Components.TaxRatesF;
-using System.Globalization;
 using Syriana_Manager.Components.TransactionsCustomersF;
 using Syriana_Manager.Components.Share;
 using Syriana_Manager.Components.DebtF;
@@ -25,8 +24,9 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// http api
 
+
+// http api
 builder.Services.AddScoped(sp =>
 {
     return new HttpClient { BaseAddress = AppConfig.ApiUri };

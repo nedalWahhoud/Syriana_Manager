@@ -2,9 +2,10 @@
 
 namespace Syriana_Manager.Components.OrderF
 {
-    public class OrderService(HttpClient http)
+    public class OrderService(HttpClient http, AuthenticationStateProvider authStateProvider)
     {
         private readonly HttpClient _http = http;
+        private readonly AuthenticationStateProvider _authStateProvider = authStateProvider;
         public List<Order> DownloadedOrders { get; private set; } = [];
         public List<OrderStatus> OrderStatusList { get; private set; } = [];
         public List<PaymentMethod> DownloadedPaymentMethods { get; private set; } = [];
@@ -12,10 +13,16 @@ namespace Syriana_Manager.Components.OrderF
         
         public event Action? OnChange;
         public void NotifyStateChanged() => OnChange?.Invoke();
-        public void InitializeAsync()
+        public async Task InitializeAsync()
         {
-            _ = RefreshCountOpenOrders(true);
-            var sad = 0;
+            var authState = await _authStateProvider.GetAuthenticationStateAsync();
+
+            var user = authState.User;
+
+            if (user.Identity != null && user.Identity.IsAuthenticated)
+            {
+                _ = RefreshCountOpenOrders(true);
+            }
         }
         public async Task<ValidationResult> AddOrderAsync(Order order)
         {
@@ -48,7 +55,7 @@ namespace Syriana_Manager.Components.OrderF
                 return new ValidationResult { Result = false, Message = ex.Message };
             }
         }
-        private GetItems<Order> getItems = new GetItems<Order>() { PageSize = 5 };
+        private GetItems<Order> getItems = new() { PageSize = 5 };
         public async Task<ValidationResult> GetAllOrdersbyStatusAsync(string statusId, List<int>? excludeIds = null)
         {
             try
@@ -103,7 +110,7 @@ namespace Syriana_Manager.Components.OrderF
                 {
                     return new ValidationResult { Result = false, Message = "Failed to retrieve Order Statuses." };
                 }
-                var orderStatuses = await response.Content.ReadFromJsonAsync<List<OrderStatus>>() ?? new ();
+                var orderStatuses = await response.Content.ReadFromJsonAsync<List<OrderStatus>>() ?? [];
                 if (orderStatuses.Count == 0)
                 {
                     return new ValidationResult { Result = false, Message = "No Order Statuses found." };
@@ -174,7 +181,7 @@ namespace Syriana_Manager.Components.OrderF
             {
                 // prüf die Count von nicht fertige Bestellungen 
                 // die Zahlen sind von id der Status Orders
-                var currentCount = (await GetOrderCountByStatusId(new List<int>() { 1, 2, 3, 4, 5, 9 })).Count;
+                var currentCount = (await GetOrderCountByStatusId([1, 2, 3, 4, 5, 9])).Count;
                 if (currentCount != 0)
                 {
                     NotFinishedOrderCount = currentCount;
@@ -272,10 +279,11 @@ namespace Syriana_Manager.Components.OrderF
 
             return searchedOrders;
         }
-        public List<int> getIdsFromOrdersLocal(List<Order> orders)
+        public List<int> GetIdsFromOrdersLocal(List<Order> orders)
         {
             return orders.Select(o => o.Id).ToList();
         }
+
         public ShippingProvider GetShippingProviderByIdLocal(int id)
         {
             return DownloadedShippingProviders.FirstOrDefault(sp => sp.Id == id) ?? null!;

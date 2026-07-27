@@ -42,9 +42,6 @@
                 <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google Logo" />
             }
         </button>*@
-        <div class="signupLink">
-            <p>Don't have an account? <a href="#" @onclick="OnRegisterClicked1" >Sign up</a></p>
-        </div>
     </div>
 </div>
 
@@ -79,11 +76,6 @@
                 }
             }
         }
-    }
-    // register
-    private void OnRegisterClicked1()
-    {
-        navigationManager!.NavigateTo("/register");
     }
     // google
     private bool isSingInLoading = false;

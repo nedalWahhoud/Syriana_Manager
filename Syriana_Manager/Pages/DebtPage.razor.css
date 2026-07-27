@@ -1,7 +1,11 @@
-﻿@media (max-width: 768px) {
+﻿.moreButton {
+    display: flex;
+    justify-content: center;
+    margin: 15px;
+}
+
+@media (max-width: 768px) {
     .tableResponsive {
-        border-radius: 10px;
-        overflow-x: auto;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
     /* Button */

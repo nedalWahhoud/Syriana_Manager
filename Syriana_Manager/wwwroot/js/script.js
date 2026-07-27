@@ -1,10 +1,10 @@
 ﻿// Aktualisiere die CSS-Variable topTable mit der tatsächlichen Höhe von topTable, um die thead th mit position: sticky korrekt zu machen, und immer sichtbar bei Scrollen zu halten.
-window.updateTopTableHeight = () => {
+window.initTopTableSticky = () => {
     const topTable = document.querySelector('.topTable');
     if (topTable) {
         const height = topTable.offsetHeight;
         // Wir speichern die tatsächliche Höhe in einer CSS-Variablen.
-        document.documentElement.style.setProperty('--top-height', height + 'px');
+        document.documentElement.style.setProperty('--topTable-height', height + 'px');
     }
 };
 

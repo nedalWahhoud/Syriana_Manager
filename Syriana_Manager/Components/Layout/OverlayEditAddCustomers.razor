@@ -153,7 +153,7 @@
 			Customers? currentCustomer = customersService.DownloadedCustomers.FirstOrDefault(c => c.Id == customer.Id);
 			if (currentCustomer != null)
 			{
-				bool isEdited = customersService.IsEdited(currentCustomer, customer);
+				bool isEdited = CustomersService.IsEdited(currentCustomer, customer);
 				if (isEdited)
 				{
 					var result = await customersService.UpdateCustomer(customer);

@@ -7,12 +7,10 @@ using System.Security.Claims;
 public class CustomAuthStateProvider : AuthenticationStateProvider
 {
     private readonly IJSRuntime _js;
-    private readonly ProductService _productService;
     public const string Permission = "Permission";
-    public CustomAuthStateProvider(IJSRuntime js, ProductService productService)
+    public CustomAuthStateProvider(IJSRuntime js)
     {
         _js = js;
-        _productService = productService;
     }
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()

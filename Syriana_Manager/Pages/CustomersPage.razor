@@ -50,9 +50,9 @@
 								<select id="stopNumberSelect" class="DropdownList" @bind="selectedStopNumberId" @bind:after="AfterStopNumberChanged">
 									<option value="0">@L["StopNumber"]</option>
 									@foreach (var customer in customersService.DownloadedCustomers
-																								.Where(c => c.DistributionLineId == selectedDistributionLineId)
-																								.DistinctBy(c => c.StopNumber)
-																								.OrderBy(c => c.StopNumber))
+																																.Where(c => c.DistributionLineId == selectedDistributionLineId)
+																																.DistinctBy(c => c.StopNumber)
+																																.OrderBy(c => c.StopNumber))
 									{
 										<option value="@customer.StopNumber">@customer.StopNumber</option>
 									}
@@ -69,49 +69,51 @@
 							</div>
 						</div>
 						<table class="table table-bordered table-hover">
-							<tr>
-								@if (ShowColumn("Id"))
-								{
-									<th>@L["Id"]</th>
-								}
-								@if (ShowColumn("Name"))
-								{
-									<th>@L["Name"]</th>
-								}
-								@if (ShowColumn("Address"))
-								{
-									<th>@L["Address"]</th>
-								}
-								@if (ShowColumn("Coordinates"))
-								{
-									<th>@L["Coordinates"]</th>
-								}
-								@if (ShowColumn("PhoneNumber"))
-								{
-									<th>@L["PhoneNumber"]</th>
-								}
-								@if (ShowColumn("EMail"))
-								{
-									<th>@L["Email"]</th>
-								}
-								@if (ShowColumn("Note"))
-								{
-									<th>@L["Note"]</th>
-								}
-								@if (ShowColumn("Direction"))
-								{
-									<th>@L["Line"]</th>
-								}
-								@if (ShowColumn("StopNumber"))
-								{
-									<th>@L["StopNumber"]</th>
-								}
-								@if (ShowColumn("PIN"))
-								{
-									<th>@L["PIN"]</th>
-								}
-								<th style="min-width:40px;">⋮</th>
-							</tr>
+							<thead>
+								<tr>
+									@if (ShowColumn("Id"))
+									{
+										<th>@L["Id"]</th>
+									}
+									@if (ShowColumn("Name"))
+									{
+										<th>@L["Name"]</th>
+									}
+									@if (ShowColumn("Address"))
+									{
+										<th>@L["Address"]</th>
+									}
+									@if (ShowColumn("Coordinates"))
+									{
+										<th>@L["Coordinates"]</th>
+									}
+									@if (ShowColumn("PhoneNumber"))
+									{
+										<th>@L["PhoneNumber"]</th>
+									}
+									@if (ShowColumn("EMail"))
+									{
+										<th>@L["Email"]</th>
+									}
+									@if (ShowColumn("Note"))
+									{
+										<th>@L["Note"]</th>
+									}
+									@if (ShowColumn("Direction"))
+									{
+										<th>@L["Line"]</th>
+									}
+									@if (ShowColumn("StopNumber"))
+									{
+										<th>@L["StopNumber"]</th>
+									}
+									@if (ShowColumn("PIN"))
+									{
+										<th>@L["PIN"]</th>
+									}
+									<th style="min-width:40px;">⋮</th>
+								</tr>
+							</thead>
 							<tbody>
 								@if (customersToDisplay == null || customersToDisplay.Count == 0)
 								{
@@ -125,7 +127,7 @@
 								{
 									@foreach (var customer in customersToDisplay)
 									{
-										<tr class="@customersService.GetRowClass(customer)">
+										<tr class="@CustomersService.GetRowClass(customer)">
 											@if (ShowColumn("Id"))
 											{
 												<td>@customer.Id</td>
@@ -314,7 +316,9 @@
 		{
 			// wenn die key in ColmunOptions geändert wurde dann remove was in Storage gespeichert
 			columnOptions = await localStorageService.SyncColumnOptionsAsync("columnOptionsCustomers", columnOptions, c => c.Key);
+
 			IsRendered.AfterRender = true;
+
 		}
 	}
 	// add

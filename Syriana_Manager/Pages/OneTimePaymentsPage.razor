@@ -53,7 +53,7 @@
                             </ul>
                         </div>
                     }
-                    <div class="Continer">
+                    <div class="tableContiner">
                         <div class="topTable">
                             <div class="buttonsDiv">
                                 @* add neu Product *@
@@ -274,7 +274,7 @@
             {
                 OneTimePaymentsGroupDto? cachedGroup = oneTimePaymentsService.DownloadedGroups
 				.SelectMany(s => s.Group)
-                .FirstOrDefault(g => g.GroupPickupDate == DateTime.Today);
+                .FirstOrDefault(g => g.GroupPickupDate == DateTime.Today && g.Payments.Any(a => a.DistributionLineId == task.lineId));
                 if (cachedGroup != null)
                 {
                     DistributionLines distributionLine = distributionLinesService.GetDistributionLineByIdLocal(task.lineId) 
@@ -595,7 +595,7 @@
     {
         try
         {
-            var (isValidCoordinates, hasAddress, fullAddress) = customersService.ValidateAndBuildMapAddress(customer);
+            var (isValidCoordinates, hasAddress, fullAddress) = CustomersService.ValidateAndBuildMapAddress(customer);
             if (!isValidCoordinates && !hasAddress)
             {
                 await js.InvokeVoidAsync("alert", "Keine gültigen Koordinaten oder Adresse für diesen Kunden vorhanden.");

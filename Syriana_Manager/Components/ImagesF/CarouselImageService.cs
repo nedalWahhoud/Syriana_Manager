@@ -91,11 +91,8 @@ namespace Syriana_Manager.Components.ImagesF
 
             try
             {
-                // المتصفح سيقوم بتصغير الصورة بطريقة سريعة جداً اعتماداً على GPU/Canvas العميل
-                // يمكنك تغيير الأبعاد إلى 2016 و 1512 أو ما يناسبك
                 var resizedFile = await imageFile.RequestImageFileAsync("image/jpeg", 2016, 1512);
 
-                // قراءة الصورة المصغرة جاهزة مباشرة
                 using var stream = resizedFile.OpenReadStream(maxAllowedSize: 30 * 1024 * 1024);
                 using var memoryStream = new MemoryStream();
 
@@ -109,14 +106,14 @@ namespace Syriana_Manager.Components.ImagesF
             }
         }
         // async
-        public async Task<List<CarouselImage>> GetAllCarouselAsync()
+        public async Task<List<CarouselImage>> GetAll()
         {
             if (DownloadedCarouselImage.Count > 0)
                 return DownloadedCarouselImage;
 
             try
             {
-                var response = await _http.GetAsync("api/Carousel/getAllCarouselImages");
+                var response = await _http.GetAsync("api/Carousel/getAll");
                 if (!response.IsSuccessStatusCode)
                 {
                     return [];

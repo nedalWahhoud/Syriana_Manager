@@ -134,21 +134,23 @@
                         @* Mehr laden *@
                         @if (orders.Count > 0)
                         {
-                            <button type="submit" class="btn btn-primary moreBtn" @onclick="() => OnMoreLoad()" disabled="@(IsOrdersLoading || AllItemsLoaded)">
-                                @if (IsOrdersLoading)
-                                {
-                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                                    <span class="ms-2">Lädt...</span>
-                                }
-                                else if (!AllItemsLoaded)
-                                {
-                                    <span>@L["MoreLoad"]</span>
-                                }
-                                @if (AllItemsLoaded)
-                                {
-                                    <span>@L["AllLoaded"]</span>
-                                }
-                            </button>
+                            <div class="moreBtnContiner">
+                                <button type="submit" class="btn btn-primary moreBtn" @onclick="() => OnMoreLoad()" disabled="@(IsOrdersLoading || AllItemsLoaded)">
+                                    @if (IsOrdersLoading)
+                                    {
+                                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                        <span class="ms-2">Lädt...</span>
+                                    }
+                                    else if (!AllItemsLoaded)
+                                    {
+                                        <span>@L["MoreLoad"]</span>
+                                    }
+                                    @if (AllItemsLoaded)
+                                    {
+                                        <span>@L["AllLoaded"]</span>
+                                    }
+                                </button>
+                            </div>
                         }
                         @* show Overlay *@
                         @if (IsOverlayVisible && overlayItems != null)
@@ -288,7 +290,7 @@
         // get orders by status local
         var orderLocal = orderService.GetOrdersByStatusLocal(statusId, excludeOrderIds);
         // add the ids of the loaded orders to the exclude list
-        excludeOrderIds.AddRange(orderService.getIdsFromOrdersLocal(orderLocal));
+        excludeOrderIds.AddRange(orderService.GetIdsFromOrdersLocal(orderLocal));
         // add local orders to the main list
         orders.AddRange(orderLocal);
     }
@@ -300,7 +302,7 @@
             // get downloaded orders
             var ordersDownloaded = orderService.GetOrdersByStatusLocal(statusId, excludeOrderIds);
             // add the ids of the downloaded orders to the exclude list
-            excludeOrderIds.AddRange(orderService.getIdsFromOrdersLocal(ordersDownloaded));
+            excludeOrderIds.AddRange(orderService.GetIdsFromOrdersLocal(ordersDownloaded));
             // add dowloaded orders to the main list
             orders.AddRange(ordersDownloaded);
 

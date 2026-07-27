@@ -561,8 +561,11 @@
 			objRef = DotNetObjectReference.Create(this);
 			// wenn die key in ColmunOptions geändert wurde dann remove was in Storage gespeichert
 			columnOptions = await localStorageService.SyncColumnOptionsAsync("columnOptions", columnOptions, c => c.Key);
+			// um die header von table sticky zu machen
+			await js.InvokeVoidAsync("initTopTableSticky");
 
 			IsRendered.AfterRender = true;
+
 		}
 		try
 		{
@@ -619,6 +622,7 @@
 	[JSInvokable]
 	public async Task OnScrollEnd()
 	{
+
 		await loadInBackground();
 	}
 	// Menu recht klicken

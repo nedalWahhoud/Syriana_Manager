@@ -1,16 +1,4 @@
-﻿/* 1.Scrollen auf der gesamten Seite und im Fenster deaktivieren */
-html, body {
-    overflow: hidden !important;
-    height: 100% !important;
-    position: fixed !important;
-    width: 100% !important;
-    touch-action: none;
-    -webkit-overflow-scrolling: none;
-    touch-action: none; /* Berührungsinteraktion für Bewegungen deaktiviert */
-    overscroll-behavior: none; /* Verhindert Rückprall an den Kanten */
-}
-
-#reader {
+﻿#reader {
     width: 100%;
     max-width: 400px;
     margin: 0 auto;
@@ -34,7 +22,7 @@ html, body {
     position: -webkit-sticky;
     position: sticky;
     /* --top-height wird in javascript-Funktion berechnet, und die 70px ist default wenn was schief gelaufen */
-    top: var(--top-height, 70px);
+    top: var(--topTable-height, 100px);
     background-color: #ffffff;
     z-index: 2;
     border-bottom: 2px solid #cccccc;

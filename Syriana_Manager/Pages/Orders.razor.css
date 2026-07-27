@@ -104,9 +104,14 @@
     font-size: 0.95rem;
     transition: background-color 0.3s ease;
     /* button center */
-    margin: 0 auto;
-    margin-bottom: 30px;
 }
+.moreBtnContiner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px;
+}
+
 /* ======== ADDRESS FORM OVERLAY ======== */
 .overlay {
     position: fixed;

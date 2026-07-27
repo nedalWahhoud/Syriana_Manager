@@ -15,7 +15,15 @@ namespace Syriana_Manager.Components.LogIn
                 HttpResponseMessage response = await _http!.PostAsJsonAsync("api/Users/login", loginModel);
 
                 if (!response.IsSuccessStatusCode)
-                    return new ValidationResult { Result = false, Message = "Login failed. Please check your credentials." };
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+
+                    return new ValidationResult
+                    {
+                        Result = false,
+                        Message = $"Status: {(int)response.StatusCode} {response.StatusCode}\n{error}"
+                    };
+                }
                 // get result
                 var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
 

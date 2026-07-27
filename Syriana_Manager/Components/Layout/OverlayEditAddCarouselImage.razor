@@ -122,9 +122,8 @@
 					return;
 				}
 				var result = await carouselImageService.UpdateCarouselImageAsync(carouselImage);
-				await js.InvokeVoidAsync("window.alert", result.Message);
 				if (result.Result == false)
-					return;
+					await js.InvokeVoidAsync("window.alert", result.Message);
 
 				var updatedCarousel = await carouselImageService.GetCarouselImageByIdAsync(carouselImage.Id);
 				if (updatedCarousel == null)
@@ -134,7 +133,7 @@
 				}
 				int index = carouselImageService.DownloadedCarouselImage.FindIndex(p => p.Id == updatedCarousel.Id);
 				carouselImageService.DownloadedCarouselImage[index] = updatedCarousel; // Update local list
-				// Benachrichtigen Sie die Vater Komponente über das Update
+																								// Benachrichtigen Sie die Vater Komponente über das Update
 				await OnHandel.InvokeAsync(action);
 			}
 		}

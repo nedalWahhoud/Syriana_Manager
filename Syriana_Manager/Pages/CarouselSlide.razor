@@ -1,6 +1,7 @@
 ﻿@page "/carousel"
 @namespace Syriana_Manager.Components.Layout
 @inject IStringLocalizer<Syriana_Manager.Components.Layout.CarouselSlide> L
+<div class="mainDiv">
 <AuthorizeView>
 	<Authorized Context="authContext">
 		@if (!IsRendered.Initialized || !IsRendered.ParametersSet || !IsRendered.AfterRender)
@@ -91,7 +92,7 @@
 		<Syriana_Manager.Pages.LogIn />
 	</NotAuthorized>
 </AuthorizeView>
-
+</div>
 @code {
 
 	private CarouselImage EditingCarouselImage = new CarouselImage();
@@ -107,7 +108,7 @@
 								user.HasClaim("permission", "fullAccess");
 		if (HasManageCarouselPermission)
 		{
-			await carouselImageService.GetAllCarouselAsync();
+			await carouselImageService.GetAll();
 		}
 		// afterRender und ParameterSet true, weil wir nutzen die funktionen hier nicht
 		IsRendered.AfterRender = IsRendered.ParametersSet = true;

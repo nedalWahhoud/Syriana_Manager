@@ -1,14 +1,4 @@
-﻿html, body {
-    overflow: hidden !important;
-    height: 100% !important;
-    position: fixed !important;
-    width: 100% !important;
-    touch-action: none;
-    -webkit-overflow-scrolling: none;
-    touch-action: none; /* Berührungsinteraktion für Bewegungen deaktiviert */
-    overscroll-behavior: none; /* Verhindert Rückprall an den Kanten */
-}
-.buttonsDiv {
+﻿.buttonsDiv {
     display: flex;
     flex-direction: row;
 }

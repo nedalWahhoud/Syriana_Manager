@@ -88,12 +88,8 @@
                 var result = await response.Content.ReadFromJsonAsync<ValidationResult>();
                 if (result?.Result == true)
                 {
-                    var index = DownloadedCustomers.FindIndex(p => p.Id == updatedCustomer.Id);
-                    if (index != -1)
-                    {
-                        var resultLocal = await UpdateCustomerLocal(updatedCustomer.Id);
-                        return resultLocal;
-                    }
+                    var resultLocal = await UpdateCustomerLocal(updatedCustomer.Id);
+                    return resultLocal;
                 }
                 return result ?? new ValidationResult { Result = false, Message = "Es ist ein unbekannter Fehler aufgetreten." };
             }
@@ -147,7 +143,7 @@
             }
         }
 
-        public string GetRowClass(Customers customer)
+        public static string GetRowClass(Customers customer)
         {
             if (customer.HasOneTimePaymentToday && customer.HasDebt)
             {
@@ -205,7 +201,7 @@
         {
             return DownloadedCustomers.Find(p => p.Id == id);
         }
-        public bool IsEdited(Customers currentCustomer, Customers editCustomer)
+        public static bool IsEdited(Customers currentCustomer, Customers editCustomer)
         {
             return currentCustomer.DistributionLineId != editCustomer.DistributionLineId ||
                    currentCustomer.Name_de != editCustomer.Name_de ||
@@ -223,7 +219,7 @@
                    currentCustomer.StopNumber != editCustomer.StopNumber ||
                    currentCustomer.PIN != editCustomer.PIN;
         }
-        public (bool isValidCoordinates, bool hasAddress, string fullAddress) ValidateAndBuildMapAddress(Customers customer)
+        public static (bool isValidCoordinates, bool hasAddress, string fullAddress)  ValidateAndBuildMapAddress(Customers customer)
         {
             if (customer == null)
                 return new();
@@ -252,8 +248,6 @@
 
             return (isValidCoordinates, hasAddress, fullAddress);
         }
-
-    
 
         public class CustomerDownloadProcess
         {

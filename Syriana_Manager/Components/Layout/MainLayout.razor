@@ -49,13 +49,12 @@
                 var lang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
                 var dir = lang == "ar" ? "rtl" : "ltr";
 
-                // استدعاء دالة JS لتطبيق الاتجاه واللغة
+                // Aufruf einer JS-Funktion zum Anwenden von Richtung und Sprache
                 await js.InvokeVoidAsync("setAppDirection", lang, dir);
-                // version
-                await js.InvokeVoidAsync("setVersion", AppConfig.Version);
+
                 _ = CheckAdminStatusAsync();
                 // Initialize the orderService to start count funktion of openOrders
-                orderService.InitializeAsync();
+                await orderService.InitializeAsync();
             }
             catch (Exception ex)
             {

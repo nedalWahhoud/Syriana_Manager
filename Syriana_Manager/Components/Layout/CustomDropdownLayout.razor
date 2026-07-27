@@ -100,7 +100,7 @@
 		try
 		{
 
-			var (isValidCoordinates, hasAddress, fullAddress) = customersService.ValidateAndBuildMapAddress(customer);
+			var (isValidCoordinates, hasAddress, fullAddress) = CustomersService.ValidateAndBuildMapAddress(customer);
 			if (!isValidCoordinates && !hasAddress)
 			{
 				await js.InvokeVoidAsync("alert", "Keine gültigen Koordinaten oder Adresse für diesen Kunden vorhanden.");
