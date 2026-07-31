@@ -12,19 +12,23 @@
 
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    overflow: hidden;
+    overflow-x: hidden;
 }
 
+.mainDiv {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
 .tableContiner {
     overflow-y: auto;
     width: 100%;
     flex-direction: column;
     overflow-x: hidden;
-}
-.mainDiv {
-    height: 100dvh;
-    display: flex;
-    flex-direction: column;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
 }
 
 /* validation-message */
@@ -246,7 +250,6 @@ html, body {
 @media (max-width: 768px) {
     .tableContiner {
         height: 100dvh;
-        padding-bottom: 60px;
     }
 
     .columnsB, .addPlusB {

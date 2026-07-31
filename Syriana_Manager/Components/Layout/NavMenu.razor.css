@@ -106,7 +106,6 @@ html[dir="rtl"] .top-row {
 
 .navbar-toggler:checked ~ .nav-scrollable {
     display: block;
-    max-height: calc(100vh - 3.5rem);
     overflow-y: auto;
 }
 
@@ -120,10 +119,7 @@ html[dir="rtl"] .top-row {
     }
 
     .nav-scrollable {
-        /* Never collapse the sidebar for wide screens */
-        display: block;
-        /* Allow sidebar to scroll for tall menus */
-        height: calc(100vh - 3.5rem);
+        height: calc(100vh - 70px);
         overflow-y: auto;
     }
 }

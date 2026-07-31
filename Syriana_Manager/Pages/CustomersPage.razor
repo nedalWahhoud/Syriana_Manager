@@ -1,4 +1,4 @@
-﻿@page "/customers"
+﻿@page "/"
 @namespace Syriana_Manager.Components.Layout
 @inject IStringLocalizer<Syriana_Manager.Components.Layout.CustomersPage> L
 <div class="mainDiv">
@@ -50,9 +50,9 @@
 								<select id="stopNumberSelect" class="DropdownList" @bind="selectedStopNumberId" @bind:after="AfterStopNumberChanged">
 									<option value="0">@L["StopNumber"]</option>
 									@foreach (var customer in customersService.DownloadedCustomers
-																																.Where(c => c.DistributionLineId == selectedDistributionLineId)
-																																.DistinctBy(c => c.StopNumber)
-																																.OrderBy(c => c.StopNumber))
+														.Where(c => c.DistributionLineId == selectedDistributionLineId)
+														.DistinctBy(c => c.StopNumber)
+														.OrderBy(c => c.StopNumber))
 									{
 										<option value="@customer.StopNumber">@customer.StopNumber</option>
 									}

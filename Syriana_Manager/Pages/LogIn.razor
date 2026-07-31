@@ -20,8 +20,8 @@
                 <span>An mich erinneren</span>
             </div>
             <div class="formGroup">
-                <button type="submit" class="btn btn-primary" disabled="@(isSingInLoading || isSingInLoading)">
-                    @if (isSingInLoading)
+                <button type="submit" class="btn btn-primary" disabled="@IsProcessing">
+                    @if (IsProcessing)
                     {
                         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                     }
@@ -32,7 +32,7 @@
                 </button>
             </div>
         </EditForm>
-       @* <button type="submit" @onclick="GoogleSingup" class="googleBtn" disabled="@(isGoogleLoading || isSingInLoading)">
+        @* <button type="submit" @onclick="GoogleSingup" class="googleBtn" disabled="@(isGoogleLoading || isSingInLoading)">
             @if (isGoogleLoading)
             {
                 <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
@@ -52,6 +52,7 @@
     // login
     private async Task HandleLogin()
     {
+        IsProcessing = true;
         loginModel.SignupProvider = "Manual";
         ValidationResult result = await authService.LoginAsync(loginModel);
         if (result.Result)
@@ -60,6 +61,8 @@
         }
         else
             _ = js.InvokeVoidAsync("alert", result.Message);
+
+        IsProcessing = false;
     }
     // keydown
     private bool IsUsernameFocused = false;
@@ -78,7 +81,7 @@
         }
     }
     // google
-    private bool isSingInLoading = false;
+    private bool IsProcessing = false;
    /* private bool isGoogleLoading = false;
     private void GoogleSingup()
     {
