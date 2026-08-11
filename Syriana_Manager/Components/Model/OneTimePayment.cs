@@ -52,6 +52,8 @@ namespace Syriana_Manager.Components.Model
         [Display(Name = "Überzahlt")]
         Ueberzahlt = 3,
         [Display(Name = "Verschoben")]
-        Verschoben = 4
+        Verschoben = 4,
+        [Display(Name = "Ausgezahlt")]
+        Ausgezahlt = 5
     }
 }

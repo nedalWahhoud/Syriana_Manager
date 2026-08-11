@@ -189,4 +189,46 @@
   <data name="Offen" xml:space="preserve">
     <value>مفتوح</value>
   </data>
+  <data name="Ausgezahlt" xml:space="preserve">
+    <value>تم صرف</value>
+  </data>
+  <data name="TotalAmount" xml:space="preserve">
+    <value>المبلغ الإجمالي</value>
+  </data>
+  <data name="ToPaymentPage" xml:space="preserve">
+    <value>الى صفحة الدفع لمرة واحدة</value>
+  </data>
+  <data name="SuccessfullySaved" xml:space="preserve">
+    <value>تم الحفظ بنجاح!</value>
+  </data>
+  <data name="SelectLine" xml:space="preserve">
+    <value>اختر الخط...</value>
+  </data>
+  <data name="SearchCustomer" xml:space="preserve">
+    <value>البحث عن عميل...</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>حفظ</value>
+  </data>
+  <data name="PleaseSelectLine" xml:space="preserve">
+    <value>يرجى اختيار الخط.</value>
+  </data>
+  <data name="Ok" xml:space="preserve">
+    <value>تم</value>
+  </data>
+  <data name="NoCustomersFound" xml:space="preserve">
+    <value>لم يتم العثور على عملاء للخط المحدد.</value>
+  </data>
+  <data name="Line" xml:space="preserve">
+    <value>الخط</value>
+  </data>
+  <data name="Details" xml:space="preserve">
+    <value>التفاصيل</value>
+  </data>
+  <data name="Date" xml:space="preserve">
+    <value>التاريخ</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>الغاء</value>
+  </data>
 </root>

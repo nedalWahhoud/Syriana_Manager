@@ -94,9 +94,7 @@ html[dir="rtl"] .top-row {
         color: white;
     }
 
-.nav-scrollable {
-    display: none;
-}
+
 
     .nav-scrollable nav {
         display: flex;
@@ -111,6 +109,12 @@ html[dir="rtl"] .top-row {
 
 .hidden {
     display: none;
+}
+
+@media (max-width: 768px) {
+    .nav-scrollable {
+        display: none;
+    }
 }
 
 @media (min-width: 641px) {

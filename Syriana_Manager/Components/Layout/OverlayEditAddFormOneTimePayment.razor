@@ -1,5 +1,5 @@
 ﻿@inherits ProjectComponentBase
-@inject IStringLocalizer<Syriana_Manager.Components.Layout.OverlayEditAddFormOneTimePayment> L
+@inject IStringLocalizer<Syriana_Manager.Components.Layout.OneTimePaymentsPage> L
 <div class="overlay">
 	<div class="standardOverlayForm">
 		@if (!isAddedSuccess)
@@ -65,7 +65,7 @@
 					{
 						<div class="overlayField  w-100">
 							<div class="dropdown  w-100">
-								<button class="@oneTimePaymentsService.GetStatusClass(oneTimePayment.Status,true) w-100 py-2"
+								<button class="@OneTimePaymentsService.GetStatusClass(oneTimePayment.Status,true) w-100 py-2"
 								type="button" 
 								id="statusDropdown-@oneTimePayment.Id" 
 								data-bs-toggle="dropdown"
@@ -199,12 +199,18 @@
 
 						<div class="mb-2 d-flex justify-content-between">
 							<span class="text-muted">@L["TotalAmount"]:</span>
-							<span class="fw-bold text-primary">@oneTimePayment.TotalAmount €</span>
+							<span class="fw-bold text-primary">
+								@(
+																oneTimePayment.Status == OneTimePaymentStatus.Ausgezahlt
+																? $"{-Math.Abs(oneTimePayment.TotalAmount)} €"
+																: $"{oneTimePayment.TotalAmount} €"
+															)
+							</span>
 						</div>
 
 						<div class="mb-2 d-flex justify-content-between">
 							<span class="text-muted">@L["Status"]:</span>
-							<span class="@oneTimePaymentsService.GetStatusClass(oneTimePayment.Status,false)" style="border: none;">
+							<span class="@OneTimePaymentsService.GetStatusClass(oneTimePayment.Status,false)" style="border: none;">
 								@L[oneTimePayment.Status.ToString()]
 							</span>
 						</div>
@@ -262,7 +268,7 @@
 		if (Action == "add")
 		{
 			// Validierung der Konsistenz des Betrags vor dem Hinzufügen
-			ValidationResult result1 = oneTimePaymentsService.ValidateAmountConsistencyAsync(oneTimePayment);
+			ValidationResult result1 = OneTimePaymentsService.ValidateAmountConsistencyAsync(oneTimePayment);
 			if(!result1.Result)
 			{
 				await js.InvokeVoidAsync("alert", result1.Message);
@@ -284,7 +290,7 @@
 		else if (Action == "updateStatus")
 		{
 			var originalPayment = oneTimePaymentsService.GetOneTimePaymentByIdLocal(oneTimePayment.Id) ?? new();
-			bool isEdited = oneTimePaymentsService.IsEdited(originalPayment, oneTimePayment);
+			bool isEdited = OneTimePaymentsService.IsEdited(originalPayment, oneTimePayment);
 			if (!isEdited)
 			{
 				Cancel();
@@ -292,7 +298,7 @@
 				return;
 			}
 			// Validierung der Konsistenz des Betrags vor dem Hinzufügen
-			ValidationResult result1 = oneTimePaymentsService.ValidateAmountConsistencyAsync(oneTimePayment);
+			ValidationResult result1 = OneTimePaymentsService.ValidateAmountConsistencyAsync(oneTimePayment);
 			if (!result1.Result)
 			{
 				await js.InvokeVoidAsync("alert", result1.Message);
@@ -347,6 +353,10 @@
 		payment.Status = newStatus;
 		if (newStatus != OneTimePaymentStatus.Verschoben && newStatus != OneTimePaymentStatus.Offen)
 			payment.AmountCollected = payment.TotalAmount;
+		if (newStatus == OneTimePaymentStatus.Ausgezahlt)
+		{
+			payment.AmountCollected = OneTimePaymentsService.ToPaidOutValue(payment.TotalAmount);
+		}
 	}
 	// UnexpectedPayment
 	private int selectedDistributionLineId = 0;

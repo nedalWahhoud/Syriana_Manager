@@ -189,4 +189,46 @@
   <data name="Offen" xml:space="preserve">
     <value>Offen</value>
   </data>
+  <data name="Ausgezahlt" xml:space="preserve">
+    <value>Ausgezahlt</value>
+  </data>
+  <data name="TotalAmount" xml:space="preserve">
+    <value>Gesamtbetrag</value>
+  </data>
+  <data name="ToPaymentPage" xml:space="preserve">
+    <value>Zu Einmalzahlung Seite</value>
+  </data>
+  <data name="SuccessfullySaved" xml:space="preserve">
+    <value>Erfolgreich gespeichert!</value>
+  </data>
+  <data name="SelectLine" xml:space="preserve">
+    <value>Linie wählen...</value>
+  </data>
+  <data name="SearchCustomer" xml:space="preserve">
+    <value>Nach Kunden suchen...</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="PleaseSelectLine" xml:space="preserve">
+    <value>Bitte wählen Sie eine Linie aus.</value>
+  </data>
+  <data name="Ok" xml:space="preserve">
+    <value>Okay</value>
+  </data>
+  <data name="NoCustomersFound" xml:space="preserve">
+    <value>Keine Kunden für die ausgewählte Linie gefunden.</value>
+  </data>
+  <data name="Line" xml:space="preserve">
+    <value>Linie</value>
+  </data>
+  <data name="Details" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="Date" xml:space="preserve">
+    <value>Datum</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
 </root>

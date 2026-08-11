@@ -292,7 +292,7 @@ namespace Syriana_Manager.Components.OneTimePaymentsF
                 .SelectMany(group => group.Payments)
                 .FirstOrDefault(p => p.Id == id);
         }
-        public ValidationResult ValidateAmountConsistencyAsync(OneTimePayment oneTimePayment)
+        public static ValidationResult ValidateAmountConsistencyAsync(OneTimePayment oneTimePayment)
         {
             if (oneTimePayment.Status == OneTimePaymentStatus.TeilweiseInkassiert && (oneTimePayment.AmountCollected == 0 || oneTimePayment.AmountCollected >= oneTimePayment.TotalAmount))
             {
@@ -306,7 +306,7 @@ namespace Syriana_Manager.Components.OneTimePaymentsF
 
             return new ValidationResult { Result = true };
         }
-        public string GetStatusClass(OneTimePaymentStatus status,bool isDropdown, bool isBaseClass = true)
+        public static string GetStatusClass(OneTimePaymentStatus status,bool isDropdown, bool isBaseClass = true)
         {
             string dropdownClass = isDropdown ? "dropdown-toggle" : "";
 
@@ -320,12 +320,13 @@ namespace Syriana_Manager.Components.OneTimePaymentsF
                 OneTimePaymentStatus.VollstaendigInkassiert => "bg-success",
                 OneTimePaymentStatus.Verschoben => "bg-danger",
                 OneTimePaymentStatus.Ueberzahlt => "bg-info",
+                OneTimePaymentStatus.Ausgezahlt => "bg-primary",
                 _ => "bg-danger"
             };
 
             return isBaseClass ? $"{baseClass} {colorClass} {textColor}" : $"{colorClass} {textColor}";
         }
-        public bool IsEdited(OneTimePayment original, OneTimePayment edited)
+        public static bool IsEdited(OneTimePayment original, OneTimePayment edited)
         {
             return original.CustomerId != edited.CustomerId ||
                    original.DistributionLineId != edited.DistributionLineId ||
@@ -334,7 +335,10 @@ namespace Syriana_Manager.Components.OneTimePaymentsF
                    original.Status != edited.Status ||
                    original.Notes != edited.Notes;
         }
-
+        public static double ToPaidOutValue(double value)
+        {
+            return -Math.Abs(value);
+        }
         public class CachedLine
         {
             public int LineId { get; set; }

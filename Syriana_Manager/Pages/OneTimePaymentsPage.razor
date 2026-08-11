@@ -126,7 +126,6 @@
                                                         }
                                                         else
                                                         {
-                                                            double collected = 0;
                                                             <div class="table-responsive" style="overflow: visible;">
                                                                 <table class="table table-sm table-striped table-hover align-middle m-0">
                                                                     <thead class="table-light">
@@ -141,8 +140,6 @@
                                                                     <tbody>
                                                                         @foreach (var p in SelectedDate?.Payments ?? new())
                                                                         {
-                                                                            collected += p.AmountCollected;
-
                                                                             <tr @key="p.Id"
                                                                             @oncontextmenu:preventDefault="true"
                                                                             @oncontextmenu="@(e => OnSelectRow(p, e))"
@@ -150,9 +147,9 @@
                                                                             class="@(selectedPayment?.Id == p.Id ? "selected" : "")">
                                                                                 <td class="fw-medium">@(IsArabic ? p.Customer?.Name_ar : p.Customer?.Name_de ?? "Fehler")</td>
                                                                                 <td class="text-center text-info-emphasis">
-                                                                                    @p.TotalAmount.ToString("N2") €
+                                                                                    @((p.Status != OneTimePaymentStatus.Ausgezahlt ? p.TotalAmount : OneTimePaymentsService.ToPaidOutValue(p.TotalAmount)).ToString("N2"))€
                                                                                 </td>
-                                                                                <td class="text-center @oneTimePaymentsService.GetStatusClass(p.Status,false,false)">@p.AmountCollected.ToString("N2") €</td>
+                                                                                <td class="text-center @OneTimePaymentsService.GetStatusClass(p.Status,false,false)">@p.AmountCollected.ToString("N2") €</td>
                                                                                 <td class="text-center">@(string.IsNullOrWhiteSpace(p.Notes) ? "-" : p.Notes)</td>
                                                                                 <td class="text-center">
                                                                                     @if (p.IsProcessing)
@@ -166,7 +163,7 @@
                                                                                     else
                                                                                     {
                                                                                         <div class="dropdown">
-                                                                                            <button class="@oneTimePaymentsService.GetStatusClass(p.Status,true)" type="button" id="statusDropdown-@p.Id" data-bs-toggle="dropdown"
+                                                                                            <button class="@OneTimePaymentsService.GetStatusClass(p.Status,true)" type="button" id="statusDropdown-@p.Id" data-bs-toggle="dropdown"
                                                                                             data-bs-boundary="viewport"
                                                                                             aria-expanded="false"
                                                                                             style="border: none;">
@@ -191,10 +188,16 @@
                                                                         {
                                                                             <tr class="table-success fw-bold border-top border-dark">
                                                                                 <td></td>
-                                                                                <td class ="text-center fw-bold">@(SelectedDate.Payments.Sum(p => p.TotalAmount).ToString("N2")) €</td>
-                                                                                <td class="text-center text-success fw-bold">
-                                                                                    @(SelectedDate.Payments.Sum(p => p.AmountCollected).ToString("N2")) €
+                                                                                <td class ="text-center fw-bold">
+                                                                                    @{
+                                                                                        @* wir rechnen alle außer die ausgezahlt weil muss nicht in total eingerechnet*@
+                                                                                        var totalAmount = SelectedDate.Payments
+                                                                                        .Where(p => p.Status != OneTimePaymentStatus.Ausgezahlt)
+                                                                                        .Sum(p => p.TotalAmount);
+                                                                                    }
+                                                                                        @totalAmount.ToString("N2") €
                                                                                 </td>
+                                                                                <td class="text-center text-success fw-bold">@(SelectedDate.Payments.Sum(p => p.AmountCollected).ToString("N2")) €</td>
                                                                                 <td></td>
                                                                                 <td></td>
                                                                             </tr>
@@ -266,14 +269,14 @@
             }
         }
 
-		// prüfen, ob es eine Gruppe mit dem heutigen Datum gibt, wenn ja, dann die line und date automatisch auswählen
+        // prüfen, ob es eine Gruppe mit dem heutigen Datum gibt, wenn ja, dann die line und date automatisch auswählen
         foreach (var task in tasks)
         {
             ValidationResult result = await task.task;
             if (result.Result)
             {
                 OneTimePaymentsGroupDto? cachedGroup = oneTimePaymentsService.DownloadedGroups
-				.SelectMany(s => s.Group)
+                .SelectMany(s => s.Group)
                 .FirstOrDefault(g => g.GroupPickupDate == DateTime.Today && g.Payments.Any(a => a.DistributionLineId == task.lineId));
                 if (cachedGroup != null)
                 {
@@ -385,6 +388,10 @@
         }
         else if (newStatus == OneTimePaymentStatus.VollstaendigInkassiert)
             editOneTimePayment.AmountCollected = currentPayment.TotalAmount;
+        else if (newStatus == OneTimePaymentStatus.Ausgezahlt)
+        {
+            editOneTimePayment.AmountCollected = OneTimePaymentsService.ToPaidOutValue(currentPayment.TotalAmount);
+        }
         else
             editOneTimePayment.AmountCollected = 0;
 
@@ -448,7 +455,7 @@
 
 
         // prüfen, ob der Betrag geändert wurde, wenn nicht, dann abbrechen die Bearbeitung, und die Spinner entfernen
-        bool isEdited = oneTimePaymentsService.IsEdited(editOneTimePayment, currentPayment);
+        bool isEdited = OneTimePaymentsService.IsEdited(editOneTimePayment, currentPayment);
         if (!isEdited)
         {
             currentPayment.IsProcessingEditingAmount = false;
@@ -644,7 +651,6 @@
 		editOneTimePayment = null!;
         IsOneTimePaymentProcessing = (true, "UnexpectedPayment");
     }
-
     private async Task SelectAllContent()
     {
         try

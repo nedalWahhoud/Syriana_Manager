@@ -10,10 +10,19 @@ namespace Syriana_Manager.Components.DebtF
             try
             {
                 var response = await _http.GetAsync($"api/DebtCustomers/getDebtByCustomerId/{customerId}");
-                if (!response.IsSuccessStatusCode)
+
+
+                if(response.StatusCode == System.Net.HttpStatusCode.NoContent)
                     return null!;
-                var debtCustomer = await response.Content.ReadFromJsonAsync<DebtCustomers>();
-                return debtCustomer!;
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var debtCustomer = await response.Content.ReadFromJsonAsync<DebtCustomers>();
+                    return debtCustomer!;
+                }
+
+                return null!;
+
             }
             catch (Exception)
             {
