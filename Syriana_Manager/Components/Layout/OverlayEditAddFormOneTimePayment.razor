@@ -4,9 +4,9 @@
 	<div class="standardOverlayForm">
 		@if (!isAddedSuccess)
 		{
-			@if (Action != "UnexpectedPayment" || UnexpectedPaymentToAdd)
+			@if (Action != "UnexpectedPayment" || unexpectedPaymentState == UnexpectedPaymentState.ReadyToAdd)
 			{
-				if (UnexpectedPaymentToAdd && UnexpectedPaymentoneTimePayment != null)
+				if (unexpectedPaymentState == UnexpectedPaymentState.ReadyToAdd && UnexpectedPaymentoneTimePayment != null)
 				{
 					oneTimePayment = UnexpectedPaymentoneTimePayment;
 					Action = "add";
@@ -113,10 +113,8 @@
 			{
 				<div class="UnexpectedPaymentDiv">
 					<div class="dropdownListsDiv">
-						<select id="distributionLineSelect"
-						class="w-full border border-gray-300 bg-white px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-						@bind="selectedDistributionLineId"
-						@bind:after="AfterDistributionLineChanged">
+						<select id="distributionLineSelect" class="w-full border border-gray-300 bg-white px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+						@bind="selectedDistributionLineId" @bind:after="AfterDistributionLineChanged">
 							<option value="0" disabled selected class="text-gray-400">@L["SelectLine"]</option>
 							@foreach (var distributionLine in distributionLinesService.DownloadedDistributionLines)
 							{
@@ -129,13 +127,11 @@
 						}
 						else
 						{
-							if (IsProcessingUnexpectedPayment)
+							if (unexpectedPaymentState == UnexpectedPaymentState.Processing)
 							{
 								<div class="text-sm text-blue-500 mt-1 text-primary">
 									Lade Kunden...
-									<span class="spinner-border spinner-border-sm"
-									role="status"
-									aria-hidden="true"></span>
+									<span class="spinner-border spinner-border-sm"role="status" aria-hidden="true"></span>
 								</div>
 							}
 							else if (customersOfSelectedLine == null)
@@ -145,12 +141,8 @@
 							else 
 							{
 								<div class="searchBox">
-
-									<input type="text" 
-									class="w-full border border-gray-300 bg-white px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-									placeholder="@L["SearchCustomer"]"
+									<input type="text" class="w-full border border-gray-300 bg-white px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="@L["SearchCustomer"]"
 									@oninput="OnSearchCustomer" />
-
 									<ul class="searchDropdown">
 										@foreach (var customer in filteredCustomers)
 										{
@@ -200,11 +192,10 @@
 						<div class="mb-2 d-flex justify-content-between">
 							<span class="text-muted">@L["TotalAmount"]:</span>
 							<span class="fw-bold text-primary">
-								@(
-																oneTimePayment.Status == OneTimePaymentStatus.Ausgezahlt
-																? $"{-Math.Abs(oneTimePayment.TotalAmount)} €"
-																: $"{oneTimePayment.TotalAmount} €"
-															)
+								@(oneTimePayment.Status == OneTimePaymentStatus.Ausgezahlt
+																																										? $"{-Math.Abs(oneTimePayment.TotalAmount)} €"
+																																										: $"{oneTimePayment.TotalAmount} €"
+																																				)
 							</span>
 						</div>
 
@@ -228,10 +219,16 @@
 				</div>
 
 				<div class="mt-4 d-flex flex-column gap-2">
-					<button class="btn btn-success px-5" @onclick="CloseOverlayAfterSuccess">@L["Ok"]</button>
-					@if (!UnexpectedPaymentToAdd)
+					<button class="btn btn-success px-5" @onclick="OkAsync">@L["Ok"]</button>
+					@if (unexpectedPaymentState != UnexpectedPaymentState.ReadyToAdd)
 					{
 						<NavLink class="btn btn-secondary px-5" href="/oneTimePayments">@L["ToPaymentPage"]</NavLink>
+					}
+					else
+					{
+						<button class="btn btn-outline-primary px-5" @onclick="ResetNewUnexpectedPayment">
+							<i class="fa-solid fa-plus me-1"></i> @L["AddAnotherUnexpectedPayment"]
+						</button>
 					}
 				</div>
 
@@ -320,15 +317,28 @@
 		}
 		IsProcessing = false;
 	}
-	private void Cancel()
+	private async Task Cancel()
 	{
-		OnHandel.InvokeAsync(("cancel",null));
+		// wenn die Aktion ursprünglich "UnexpectedPayment" war, dann wieder UnexpectedPayment setzen, um in page zu Funktionen von UnexpectedPayment durchzuführen
+		if (unexpectedPaymentHasUsed.Item1)
+		{
+			// get letze oneTimePayment von unexpectedPaymentHasUsed, und dann wieder UnexpectedPayment setzen, um in page zu Funktionen von UnexpectedPayment durchzuführen
+			oneTimePayment = UnexpectedPaymentoneTimePayment;
+			await PrepareAndEmitAction();
+		}
+		else
+			await OnHandel.InvokeAsync(("cancel", null));
 	}
-	private async Task CloseOverlayAfterSuccess()
+	private async Task OkAsync()
+	{
+		await PrepareAndEmitAction();
+	}
+	private async Task PrepareAndEmitAction()
 	{
 		isAddedSuccess = false;
-
-		if (Action == "add" && UnexpectedPaymentToAdd)
+		// wenn (Action == "add" && unexpectedPaymentState == UnexpectedPaymentState.ReadyToAdd) dann die aktion ursprünglich war "UnexpectedPayment, dann wieder UnexpectedPayment setzen
+		// um in page zu Funktionen von UnexpectedPayment durchzuführen, und wenn unexpectedPaymentHasUsed == true, dann war bestimmt UnexpectedPayment
+		if ((Action == "add" && unexpectedPaymentState == UnexpectedPaymentState.ReadyToAdd) || unexpectedPaymentHasUsed.Item1)
 			Action = "UnexpectedPayment";
 
 		await OnHandel.InvokeAsync((Action, oneTimePayment));
@@ -358,13 +368,27 @@
 			payment.AmountCollected = OneTimePaymentsService.ToPaidOutValue(payment.TotalAmount);
 		}
 	}
-	// UnexpectedPayment
+	// UnexpectedPaymen
+	private UnexpectedPaymentState unexpectedPaymentState = UnexpectedPaymentState.Idle;
+	private (bool, OneTimePayment) unexpectedPaymentHasUsed = (false ,null!);
+	private void ResetNewUnexpectedPayment()
+	{
+		unexpectedPaymentHasUsed = (true, UnexpectedPaymentoneTimePayment);
+		isAddedSuccess = false;
+		Action = "UnexpectedPayment";
+		selectedDistributionLineId = 0;
+		selectedCustomerId = 0;
+		//oneTimePayment = new OneTimePayment();
+		customersOfSelectedLine = null!;
+		filteredCustomers = new();
+		unexpectedPaymentState = UnexpectedPaymentState.Idle;
+		StateHasChanged();
+	}
 	private int selectedDistributionLineId = 0;
 	private List<Customers>? customersOfSelectedLine;
-	private bool IsProcessingUnexpectedPayment = false;
 	private async Task AfterDistributionLineChanged()
 	{
-		IsProcessingUnexpectedPayment = true;
+		unexpectedPaymentState = UnexpectedPaymentState.Processing;
 		var result = await customersService.GetAllCustomersByLineId(selectedDistributionLineId);
 		if (result != null && result.Result)
 		{
@@ -372,13 +396,11 @@
 			StateHasChanged();
 		}
 		else
-		{
 			customersOfSelectedLine = null!;
-		}
-		IsProcessingUnexpectedPayment = false;
+
+		unexpectedPaymentState = UnexpectedPaymentState.Processed;
 	}
 	private int selectedCustomerId = 0;
-	private bool UnexpectedPaymentToAdd = false;
 	private OneTimePayment UnexpectedPaymentoneTimePayment = null!;
 	private async Task AfterCustomerhanged()
 	{
@@ -392,7 +414,7 @@
 						?? await distributionLinesService.GetDistributionLineByIdAsync(selectedDistributionLineId),
 					PickupDate = DateTime.Now
 			};
-		UnexpectedPaymentToAdd = true;
+		unexpectedPaymentState = UnexpectedPaymentState.ReadyToAdd;
 		StateHasChanged();
 	}
 	private List<Customers> filteredCustomers = new();

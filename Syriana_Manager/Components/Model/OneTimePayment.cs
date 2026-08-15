@@ -56,4 +56,11 @@ namespace Syriana_Manager.Components.Model
         [Display(Name = "Ausgezahlt")]
         Ausgezahlt = 5
     }
+    public enum UnexpectedPaymentState
+    {
+        Idle,
+        Processing,
+        Processed,
+        ReadyToAdd
+    }
 }

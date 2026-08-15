@@ -231,4 +231,7 @@
   <data name="Cancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
+  <data name="AddAnotherUnexpectedPayment" xml:space="preserve">
+    <value>Add another payment</value>
+  </data>
 </root>

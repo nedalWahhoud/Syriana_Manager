@@ -414,7 +414,7 @@
     }
 
     private (bool , string) IsOneTimePaymentProcessing = (false,null!);
-    public void HandleOneTimePayment((string action, OneTimePayment? oneTimePayment) args)
+    public async Task HandleOneTimePayment((string action, OneTimePayment? oneTimePayment) args)
     {
         if (args.action == "updateStatus" || args.action == "editTotalAmount")
         {
@@ -437,7 +437,9 @@
             // starten eine taks um die data von server zu holen
             tasks.Add((oneTimePaymentsService.GetGroupedPaymentsByLineId(lineId), lineId));
             // 
-            SelectedLine = args.oneTimePayment?.DistributionLine ?? null!;
+            SelectedLine = args.oneTimePayment?.DistributionLine
+                   ?? distributionLinesService.GetDistributionLineByIdLocal(lineId)
+                   ?? await distributionLinesService.GetDistributionLineByIdAsync(lineId);
 
             var cachedData = oneTimePaymentsService.DownloadedGroups.FirstOrDefault(lineList => lineList.Group.Any(group => group.Payments.Any(p => p.DistributionLineId == lineId))).Group ?? new();
             oneTimePaymentsGroup = cachedData.ToList();

@@ -335,6 +335,13 @@ namespace Syriana_Manager.Components.OneTimePaymentsF
                    original.Status != edited.Status ||
                    original.Notes != edited.Notes;
         }
+        public OneTimePayment? GetLastAddedOneTimePayment()
+        {
+            return DownloadedGroups
+                .SelectMany(line => line.Group)
+                .SelectMany(group => group.Payments)
+                .LastOrDefault(); 
+        }
         public static double ToPaidOutValue(double value)
         {
             return -Math.Abs(value);
