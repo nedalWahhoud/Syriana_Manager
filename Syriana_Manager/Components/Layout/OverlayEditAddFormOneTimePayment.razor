@@ -28,7 +28,7 @@
 					<div class="overlayField">
 						<div class="input-group">
 							<span class="input-group-text customLatIcon">@L["Amount"]</span>
-							<InputNumber TValue="double" class="form-control" @bind-Value="oneTimePayment.TotalAmount" @onfocus="@(e => SelectAllContent())" disabled="@(!(Action == "editTotalAmount" || Action == "add"))" />
+							<InputNumber TValue="double" class="form-control" @bind-Value="oneTimePayment.TotalAmount" @onfocus="@(e => SelectAllContent())" disabled="@(!(Action == "editAll" || Action == "add"))" />
 							<span class="input-group-text customLatIcon">€</span>
 						</div>
 						<ValidationMessage For="@(() => oneTimePayment.TotalAmount)" />
@@ -36,7 +36,7 @@
 					<div class="overlayField">
 						<div class="input-group">
 							<span class="input-group-text customLatIcon"><i class="bi bi-calendar-event @(IsArabic ? "ms-2" : "me-2")"></i> @L["Date"]</span>
-							<InputDate id="PickupDate" class="form-control" @bind-Value="oneTimePayment.PickupDate" disabled="@(!(Action == "add"))" />
+							<InputDate id="PickupDate" class="form-control" @bind-Value="oneTimePayment.PickupDate" disabled="@(!(Action == "add" || Action == "editAll"))" />
 						</div>
 						<ValidationMessage For="@(() => oneTimePayment.PickupDate)" />
 					</div>
@@ -193,9 +193,9 @@
 							<span class="text-muted">@L["TotalAmount"]:</span>
 							<span class="fw-bold text-primary">
 								@(oneTimePayment.Status == OneTimePaymentStatus.Ausgezahlt
-																																										? $"{-Math.Abs(oneTimePayment.TotalAmount)} €"
-																																										: $"{oneTimePayment.TotalAmount} €"
-																																				)
+																																																																																				? $"{-Math.Abs(oneTimePayment.TotalAmount)} €"
+																																																																																				: $"{oneTimePayment.TotalAmount} €"
+																																																																														)
 							</span>
 						</div>
 
@@ -262,60 +262,83 @@
 	{
 		IsProcessing = true;
 		TrimItems();
-		if (Action == "add")
+
+		try
 		{
-			// Validierung der Konsistenz des Betrags vor dem Hinzufügen
-			ValidationResult result1 = OneTimePaymentsService.ValidateAmountConsistencyAsync(oneTimePayment);
-			if(!result1.Result)
+			// Check
+			if (Action == "add" || Action == "updateStatus")
 			{
-				await js.InvokeVoidAsync("alert", result1.Message);
+				// Validierung der Konsistenz des Betrags vor dem Hinzufügen bei status änderen
+				ValidationResult result1 = OneTimePaymentsService.ValidateAmountConsistency(oneTimePayment);
+				if (!result1.Result)
+				{
+					await js.InvokeVoidAsync("alert", result1.Message);
+					IsProcessing = false;
+					return;
+				}
+			}
+			// Check
+			if (Action == "add" || Action == "editAll")
+			{
+				bool IsDuplicate = oneTimePaymentsService.IsDuplicate(oneTimePayment);
+				if(IsDuplicate)
+				{
+					await js.InvokeVoidAsync("alert", L["IsDuplicate"].Value);
+					IsProcessing = false;
+					return;
+				}
+			}
+
+			if (Action == "add")
+			{
+				var result = await oneTimePaymentsService.Add(oneTimePayment);
+				if (result != null && result.Result)
+				{
+					isAddedSuccess = true;
+					oneTimePayment.Id = result?.NewId ?? 0; // die Id der neu erstellten Einmalzahlung zuweisen
+				}
+				else if (result != null && !result.Result)
+					await js.InvokeVoidAsync("alert", result.Message);
+				else
+					await js.InvokeVoidAsync("alert", L["ErrorAdd"].Value);
+
 				IsProcessing = false;
 				return;
 			}
 
-			var result = await oneTimePaymentsService.Add(oneTimePayment);
-			if (result != null && result.Result)
+
+			if (Action == "updateStatus" || Action == "editAll")
 			{
-				isAddedSuccess = true;
-				oneTimePayment.Id = result?.NewId ?? 0; // die Id der neu erstellten Einmalzahlung zuweisen
+				var originalPayment = oneTimePaymentsService.GetOneTimePaymentByIdLocal(oneTimePayment.Id) ?? new();
+
+				var isEdited = OneTimePaymentsService.IsEdited(originalPayment, oneTimePayment);
+				if (!isEdited.IsEdited)
+				{
+					await Cancel();
+					IsProcessing = false;
+					return;
+				}
+
+				var result = await oneTimePaymentsService.UpdateOneTimePaymentAsync(oneTimePayment, isEdited.IsDateEdited);
+				if (result.Result)
+				{
+					if (isEdited.IsDateEdited)
+					{
+						Action = "editAllWithDate";
+					}
+
+					await OnHandel.InvokeAsync((Action, oneTimePayment));
+				}
+				else
+				{
+					await js.InvokeVoidAsync("alert", result.Message);
+				}
 			}
-			else if (result != null && !result.Result)
-				await js.InvokeVoidAsync("alert", result.Message);
-			else
-				await js.InvokeVoidAsync("alert", "Fehler beim Speichern der Einmalzahlung. Bitte überprüfen Sie Ihre Eingaben und versuchen Sie es erneut.");
 		}
-		else if (Action == "updateStatus")
+		finally
 		{
-			var originalPayment = oneTimePaymentsService.GetOneTimePaymentByIdLocal(oneTimePayment.Id) ?? new();
-			bool isEdited = OneTimePaymentsService.IsEdited(originalPayment, oneTimePayment);
-			if (!isEdited)
-			{
-				Cancel();
-				IsProcessing = false;
-				return;
-			}
-			// Validierung der Konsistenz des Betrags vor dem Hinzufügen
-			ValidationResult result1 = OneTimePaymentsService.ValidateAmountConsistencyAsync(oneTimePayment);
-			if (!result1.Result)
-			{
-				await js.InvokeVoidAsync("alert", result1.Message);
-				IsProcessing = false;
-				return;
-			}
+			IsProcessing = false;
 		}
-		if (Action == "updateStatus" || Action == "editTotalAmount")
-		{
-			var result = await oneTimePaymentsService.UpdateOneTimePaymentAsync(oneTimePayment);
-			if (result.Result)
-			{
-				await OnHandel.InvokeAsync((Action, oneTimePayment));
-			}
-			else
-			{
-				await js.InvokeVoidAsync("alert", result.Message);
-			}
-		}
-		IsProcessing = false;
 	}
 	private async Task Cancel()
 	{

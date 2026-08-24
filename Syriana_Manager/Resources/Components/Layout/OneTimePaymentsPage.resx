@@ -234,4 +234,10 @@
   <data name="AddAnotherUnexpectedPayment" xml:space="preserve">
     <value>Add another payment</value>
   </data>
+  <data name="ErrorAdd" xml:space="preserve">
+    <value>Error saving the one-off payment. Please check your entries and try again.</value>
+  </data>
+  <data name="IsDuplicate" xml:space="preserve">
+    <value>A one-time payment for this date already exists for this customer; you can edit a payment.</value>
+  </data>
 </root>

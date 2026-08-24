@@ -234,4 +234,10 @@
   <data name="AddAnotherUnexpectedPayment" xml:space="preserve">
     <value>إضافة دفعة أخرى</value>
   </data>
+  <data name="ErrorAdd" xml:space="preserve">
+    <value>حدث خطأ أثناء حفظ الدفعة لمرة واحدة. يرجى مراجعة بياناتك والمحاولة مرة أخرى.</value>
+  </data>
+  <data name="IsDuplicate" xml:space="preserve">
+    <value>يوجد بالفعل دفعة لهذا الزبون في هاذا اليوم , يمكن تعديل عملية الدفع.</value>
+  </data>
 </root>

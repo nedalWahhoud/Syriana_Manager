@@ -234,4 +234,10 @@
   <data name="AddAnotherUnexpectedPayment" xml:space="preserve">
     <value>Weitere Zahlung hinzufügen</value>
   </data>
+  <data name="ErrorAdd" xml:space="preserve">
+    <value>Fehler beim Speichern der Einmalzahlung. Bitte überprüfen Sie Ihre Eingaben und versuchen Sie es erneut.</value>
+  </data>
+  <data name="IsDuplicate" xml:space="preserve">
+    <value>Für diesen Kunden existiert bereits eine Einmalzahlung in diesem Datum, Sie können eine Zahlung bearbeiten.</value>
+  </data>
 </root>

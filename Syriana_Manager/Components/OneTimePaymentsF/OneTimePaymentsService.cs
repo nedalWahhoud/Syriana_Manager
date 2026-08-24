@@ -1,4 +1,5 @@
 ﻿using Syriana_Manager.Components.CustomersF;
+using Syriana_Manager.Components.Model;
 
 namespace Syriana_Manager.Components.OneTimePaymentsF
 {
@@ -103,17 +104,19 @@ namespace Syriana_Manager.Components.OneTimePaymentsF
             }
         }
 
-        public async Task<ValidationResult> UpdateOneTimePaymentAsync(OneTimePayment editOneTimePayment)
+        public async Task<ValidationResult> UpdateOneTimePaymentAsync(OneTimePayment newOneTimePayment, bool IsDateEdited = false)
         {
             try
             {
-                var response = await _http.PutAsJsonAsync($"api/OneTimePayments/updateStauts", editOneTimePayment);
+                var response = await _http.PutAsJsonAsync($"api/OneTimePayments/updateStauts", newOneTimePayment);
                 var result = await response.Content.ReadFromJsonAsync<ValidationResult>();
 
                 if (!response.IsSuccessStatusCode || result == null || !result.Result)
                 {
                     return result ?? new ValidationResult { Result = false, Message = "Fehler beim Aktualisieren des Zahlungsstatus." };
                 }
+
+
                 // update in locally list
                 List<OneTimePaymentsGroupDto> targetLineList = null!;
                 OneTimePaymentsGroupDto targetGroup = null!;
@@ -123,7 +126,7 @@ namespace Syriana_Manager.Components.OneTimePaymentsF
                 {
                     foreach (var group in Group)
                     {
-                        var payment = group.Payments.FirstOrDefault(p => p.Id == editOneTimePayment.Id);
+                        var payment = group.Payments.FirstOrDefault(p => p.Id == newOneTimePayment.Id);
                         if (payment != null)
                         {
                             targetLineList = Group;
@@ -142,10 +145,15 @@ namespace Syriana_Manager.Components.OneTimePaymentsF
                     if (index != -1)
                     {
                         // Ersetze die alten Daten durch die aktualisierten Daten vom Server.
-                        targetGroup.Payments[index] = editOneTimePayment;
+                        targetGroup.Payments[index] = newOneTimePayment;
                     }
                 }
-
+                // wenn PickupDate geändert wurde, dann Umgruppieren
+                if (IsDateEdited == true)
+                {
+                    // get alle payment von local list
+                    RegroupPayments(newOneTimePayment.DistributionLineId);
+                }
 
                 return result;
             }
@@ -292,7 +300,7 @@ namespace Syriana_Manager.Components.OneTimePaymentsF
                 .SelectMany(group => group.Payments)
                 .FirstOrDefault(p => p.Id == id);
         }
-        public static ValidationResult ValidateAmountConsistencyAsync(OneTimePayment oneTimePayment)
+        public static ValidationResult ValidateAmountConsistency(OneTimePayment oneTimePayment)
         {
             if (oneTimePayment.Status == OneTimePaymentStatus.TeilweiseInkassiert && (oneTimePayment.AmountCollected == 0 || oneTimePayment.AmountCollected >= oneTimePayment.TotalAmount))
             {
@@ -326,14 +334,74 @@ namespace Syriana_Manager.Components.OneTimePaymentsF
 
             return isBaseClass ? $"{baseClass} {colorClass} {textColor}" : $"{colorClass} {textColor}";
         }
-        public static bool IsEdited(OneTimePayment original, OneTimePayment edited)
+        public static (bool IsEdited,bool IsDateEdited) IsEdited(OneTimePayment original, OneTimePayment edited)
         {
-            return original.CustomerId != edited.CustomerId ||
-                   original.DistributionLineId != edited.DistributionLineId ||
-                   original.TotalAmount != edited.TotalAmount ||
-                   original.AmountCollected != edited.AmountCollected ||
-                   original.Status != edited.Status ||
-                   original.Notes != edited.Notes;
+            bool isDateEdited = original.PickupDate != edited.PickupDate;
+
+            bool isEdited =
+                original.CustomerId != edited.CustomerId ||
+                original.DistributionLineId != edited.DistributionLineId ||
+                original.TotalAmount != edited.TotalAmount ||
+                original.AmountCollected != edited.AmountCollected ||
+                original.Status != edited.Status ||
+                isDateEdited ||
+                original.Notes != edited.Notes;
+
+            return (isEdited, isDateEdited);
+        }
+        public bool IsDuplicate(OneTimePayment oneTimePayment)
+        {
+
+            // Überprüfen, ob bereits eine Einmalzahlung für denselben Kunden, dieselbe Verteilungslinie und dasselbe PickupDate existiert
+            var startOfDay = oneTimePayment.PickupDate.Date;
+            var endOfDay = startOfDay.AddDays(1);
+            bool isDuplicate = DownloadedGroups
+                              .SelectMany(x => x.Group)
+                              .SelectMany(group => group.Payments)
+                              .Any(p =>
+                                      p.Id != oneTimePayment.Id &&
+                                      p.CustomerId == oneTimePayment.CustomerId &&
+                                      p.DistributionLineId == oneTimePayment.DistributionLineId &&
+                                      p.PickupDate >= startOfDay &&
+                                      p.PickupDate < endOfDay);
+
+            if (isDuplicate)
+              return true;
+
+            return false;
+        }
+        private void RegroupPayments(int lineId)
+        {
+            var lineData = DownloadedGroups
+                          .FirstOrDefault(x => x.lineId == lineId);
+
+            if (lineData.Group == null)
+                return;
+
+            // 1. Alle aktuellen Zahlungen entgegennehmen
+            var payments = lineData.Group
+                .SelectMany(g => g.Payments)
+                .ToList();
+
+            // delete group of line
+            DownloadedGroups.RemoveAll(x => x.lineId == lineId);
+
+            // Umgruppierung
+            var newGroups = payments
+                .GroupBy(p => p.PickupDate.Date)
+                .OrderBy(g => g.Key)
+                .Select(g => new OneTimePaymentsGroupDto
+                {
+                    GroupPickupDate = g.Key,
+
+                    Payments = g
+                        .OrderBy(p => p.Customer?.StopNumber ?? 0)
+                        .ToList()
+                })
+                .ToList();
+
+            // add neu grupp mit neue Zahlungen
+            DownloadedGroups.Add((newGroups, lineId));
         }
         public OneTimePayment? GetLastAddedOneTimePayment()
         {

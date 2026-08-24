@@ -43,7 +43,7 @@
                                     <a><i class="fa-solid fa-trash-can"></i> @L["Delete"]</a>
                                 </li>
                                 <li class="@((isNotOpen || !IsHasManageCustomerOneTimePaymentPermission) ? "disabled text-muted pe-none opacity-50" : "")"
-                                @onclick="() => EditTotalAmount(selectedPayment)">
+                                @onclick="() => editAll(selectedPayment)">
                                     <a><i class="fa-solid fa-pen-to-square"></i> @L["Edit"]</a>
                                 </li>
                                 <li class="@((!isNotOpen || selectedPayment.Status == OneTimePaymentStatus.Verschoben) ? "disabled text-muted pe-none opacity-50" : "")"
@@ -416,14 +416,14 @@
     private (bool , string) IsOneTimePaymentProcessing = (false,null!);
     public async Task HandleOneTimePayment((string action, OneTimePayment? oneTimePayment) args)
     {
-        if (args.action == "updateStatus" || args.action == "editTotalAmount")
+        if (args.action == "updateStatus" || args.action == "editAll")
         {
             if (args.oneTimePayment != null)
             {
                 UpdateSelectedDate(args.oneTimePayment);
             }
         }
-        else if (args.action == "UnexpectedPayment")
+        else if (args.action == "UnexpectedPayment" || args.action == "editAllWithDate")
         {
             // wir klappen alle line und date zu, um der Benutzer nochmal auf eine Date zu klicken, und die data von server aktualisieren, damit die neue unerwartete Zahlung angezeigt wird, und die Daten immer aktuell sind
             /* SelectedLine = null!;
@@ -457,8 +457,8 @@
 
 
         // prüfen, ob der Betrag geändert wurde, wenn nicht, dann abbrechen die Bearbeitung, und die Spinner entfernen
-        bool isEdited = OneTimePaymentsService.IsEdited(editOneTimePayment, currentPayment);
-        if (!isEdited)
+        var isEdited = OneTimePaymentsService.IsEdited(editOneTimePayment, currentPayment);
+        if (!isEdited.IsEdited)
         {
             currentPayment.IsProcessingEditingAmount = false;
             return;
@@ -495,7 +495,7 @@
         editOneTimePayment = null!;
         currentPayment.IsProcessingEditingAmount = false;
     }
-    private void CancelEditTotalAmount(OneTimePayment oneTimePayment)
+    private void CanceleditAll(OneTimePayment oneTimePayment)
     {
         editOneTimePayment.Customer = oneTimePayment.Customer;
         UpdateSelectedDate(editOneTimePayment);
@@ -559,7 +559,7 @@
             }
         }
     }
-    private async Task EditTotalAmount(OneTimePayment p)
+    private async Task editAll(OneTimePayment p)
     {
         var customer = (p.Customer
                          ?? (customersService.GetCustomerByIdLocal(p.CustomerId)
@@ -583,7 +583,7 @@
                 Customer = customer,
                 DistributionLine = distributionLine
             };
-        IsOneTimePaymentProcessing = (true, "editTotalAmount");
+        IsOneTimePaymentProcessing = (true, "editAll");
         showContextMenu = false;
     }
     private async Task OnNotifyCustomer(OneTimePayment payment)
