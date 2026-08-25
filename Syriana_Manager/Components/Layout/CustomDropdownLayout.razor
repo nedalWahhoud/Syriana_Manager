@@ -3,32 +3,32 @@
 	@if (!IsDebtPage)
 	{
 		<li>
-			<a class="@(Permissions.IsDebtManage  ? "dropdown-item" : "disabledItem")" @onclick="@(Permissions.IsDebtManage ? EventCallback.Factory.Create<MouseEventArgs>(this, () => OnDebts(customer.Id))  : default!)">
+			<a class="@(Permissions.IsDebtManage  ? "dropdown-item" : "disabledItem")" @onclick="@(Permissions.IsDebtManage ? EventCallback.Factory.Create<MouseEventArgs>(this, () => customerDropdownService.OnDebts(customer))  : default!)">
 				<i class="bi bi-cash-stack me-1"></i>
 				@L["Debts"]
 			</a>
 		</li>
 	}
 	<li>
-		<a class="dropdown-item" @onclick="() => OnMap(customer)">
+		<a class="dropdown-item" @onclick="() => customerDropdownService.OnMap(customer)">
 			<i class="bi bi-geo-alt me-1"></i>
 			@L["Navigate"]
 		</a>
 	</li>
 	<li>
-		<a class="dropdown-item" @onclick="() => OnPhone(customer?.PhoneNumber!)">
+		<a class="dropdown-item" @onclick="() => customerDropdownService.OnPhone(customer?.PhoneNumber!)">
 			<i class="bi bi-telephone me-1"></i>
 			@L["PhoneCall"]
 		</a>
 	</li>
 	<li>
-		<a class="dropdown-item" @onclick="() => OnWhatsAppMessage(customer)">
+		<a class="dropdown-item" @onclick="() => customerDropdownService.OnWhatsAppMessage(customer)">
 			<i class="bi bi-chat-dots-fill me-1" style="color: #28a745;"></i>
 			@L["OpenWhatsApp"]
 		</a>
 	</li>
 	<li>
-		<a class="dropdown-item" @onclick="() => viaWhatasappShare(customer)">
+		<a class="dropdown-item" @onclick="() => customerDropdownService.viaWhatasappShare(customer)">
 			<i class="bi bi-whatsapp me-1"></i>
 			@L["ShareViaWhatsApp"]
 		</a>
@@ -81,64 +81,7 @@
 		if (customer != null)
 			customerProcess.CustomerId = customer.Id;
 	}
-	private async Task viaWhatasappShare(Customers customer)
-	{
-		var result = await whatsAppService.SendCustomerInfo(customer);
-		if (!result.Result)
-		{
-			await js.InvokeVoidAsync("alert", result.Message);
-		}
-	}
-	private async Task OnDebts(int customerId)
-	{
-		if (customer != null)
-			await localStorageService.Set("selectedStopNummerId", customer.StopNumber);
-		navigationManager.NavigateTo($"/debt/{customerId}");
-	}
-	private async Task OnMap(Customers customer)
-	{
-		try
-		{
-
-			var (isValidCoordinates, hasAddress, fullAddress) = CustomersService.ValidateAndBuildMapAddress(customer);
-			if (!isValidCoordinates && !hasAddress)
-			{
-				await js.InvokeVoidAsync("alert", "Keine gültigen Koordinaten oder Adresse für diesen Kunden vorhanden.");
-				return;
-			}
-
-			await js.InvokeVoidAsync("mapRedirect.openMap", customer.Latitude, customer.Longitude, fullAddress);
-		}
-		catch (Exception ex)
-		{
-			Console.WriteLine($"OnMap Fehler CustomDropdown{ex.InnerException?.Message ?? ex.Message}");
-		}
-	}
-	private async Task OnPhone(string phoneNumber)
-	{
-		try
-		{
-			if (customer == null || string.IsNullOrWhiteSpace(customer.PhoneNumber))
-			{
-				await js.InvokeVoidAsync("alert", "Keine Telefonnummer für diesen Kunden vorhanden.");
-				return;
-			}
-
-			await js.InvokeVoidAsync("phoneRedirect.openPhoneDialer", customer.PhoneNumber);
-		}
-		catch (Exception ex)
-		{
-			Console.WriteLine($"Error redirecting to phone: {ex.Message}");
-		}
-	}
-	private async Task OnWhatsAppMessage(Customers customer)
-	{
-		var result = await whatsAppService.SendMassage(customer);
-		if (!result.Result)
-		{
-			await js.InvokeVoidAsync("alert", result.Message);
-		}
-	}
+	
 	public async Task newOneTimePayment(Customers customer)
 	{
 		var oneTimePayment = new OneTimePayment

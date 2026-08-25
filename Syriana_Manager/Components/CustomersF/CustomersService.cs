@@ -1,10 +1,13 @@
-﻿namespace Syriana_Manager.Components.CustomersF
+﻿using Syriana_Manager.Components.Model;
+
+namespace Syriana_Manager.Components.CustomersF
 {
     public class CustomersService(HttpClient http)
     {
         private readonly HttpClient _http = http;
         public List<Customers> DownloadedCustomers{ get; private set; } = [];
         public List<CustomerDownloadProcess> DownloadProcesses { get; private set; } = [];
+        public (List<Customers> customers,int lineId) sortedCustomersByStopNummer { get; private set; } = (null!,0);
         public async Task<ValidationResult> GetAllCustomersByLineId(int id = 0)
         {
             if (DownloadProcesses.Any(d => d.Id == id))
@@ -248,7 +251,19 @@
 
             return (isValidCoordinates, hasAddress, fullAddress);
         }
+        public int GetOrderByStopNumberAndCurrenIndex(int lineId,int customerId)
+        {
+            if (sortedCustomersByStopNummer.customers == null || sortedCustomersByStopNummer.lineId != lineId)
+            {
+                sortedCustomersByStopNummer = (DownloadedCustomers
+                 .Where(c => c.DistributionLineId == lineId)
+                 .OrderBy(c => c.StopNumber).ToList(), lineId);
+            }
+            int currentIndex = sortedCustomersByStopNummer.customers.FindIndex(c => c.Id == customerId);
 
+            return currentIndex;
+        }
+        // 
         public class CustomerDownloadProcess
         {
            public int Id { get; set; }

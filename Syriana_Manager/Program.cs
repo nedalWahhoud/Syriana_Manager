@@ -33,7 +33,6 @@ builder.Services.AddScoped(sp =>
 });
 
 
-
 // auth
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
@@ -67,6 +66,7 @@ builder.Services.AddScoped<CarouselImageService>();
 builder.Services.AddScoped<DistributionLinesService>();
 //  Customers Service 
 builder.Services.AddScoped<CustomersService>();
+builder.Services.AddScoped<CustomerDropdownService>();
 //  WhatsApp Service 
 builder.Services.AddScoped<WhatsAppService>();
 //  DebtCustomers Service 

@@ -21,21 +21,18 @@
                         @onclick:stopPropagation="true">
                             <ul>
                                 <li>
-                                    <a class="dropdown-item" @onclick="() => OnPhone(selectedPayment.Customer?.PhoneNumber!)">
-                                        <i class="bi bi-telephone me-1"></i>
-                                        @L["PhoneCall"]
+                                    <a class="dropdown-item" @onclick="() => customerDropdownService.OnPhone(selectedPayment.Customer?.PhoneNumber!)">
+                                        <i class="bi bi-telephone me-1"></i> @L["PhoneCall"]
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" @onclick="() => OnWhatsAppMessage(selectedPayment.Customer!)">
-                                        <i class="bi bi-chat-dots-fill me-1" style="color: #28a745;"></i>
-                                        @L["OpenWhatsApp"]
+                                    <a class="dropdown-item" @onclick="() => customerDropdownService.OnWhatsAppMessage(selectedPayment.Customer!)">
+                                        <i class="bi bi-chat-dots-fill me-1" style="color: #28a745;"></i>@L["OpenWhatsApp"]
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" @onclick="() => OnMap(selectedPayment.Customer!)">
-                                        <i class="bi bi-geo-alt me-1"></i>
-                                        @L["Navigate"]
+                                    <a class="dropdown-item" @onclick="() => customerDropdownService.OnMap(selectedPayment.Customer!)">
+                                        <i class="bi bi-geo-alt me-1"></i> @L["Navigate"]
                                     </a>
                                 </li>
                                 <li class="@(!IsHasManageCustomerOneTimePaymentPermission ? "disabled text-muted pe-none opacity-50" : "")"
@@ -598,52 +595,6 @@
             await js.InvokeVoidAsync("alert", result.Message);
         }
 
-        showContextMenu = false;
-    }
-    private async Task OnMap(Customers customer)
-    {
-        try
-        {
-            var (isValidCoordinates, hasAddress, fullAddress) = CustomersService.ValidateAndBuildMapAddress(customer);
-            if (!isValidCoordinates && !hasAddress)
-            {
-                await js.InvokeVoidAsync("alert", "Keine gültigen Koordinaten oder Adresse für diesen Kunden vorhanden.");
-                return;
-            }
-
-            await js.InvokeVoidAsync("mapRedirect.openMap", customer.Latitude, customer.Longitude, fullAddress);
-            showContextMenu = false;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"OnMap Fehler OneTimePaymentPage: {ex.InnerException?.Message ?? ex.Message}");
-        }
-    }
-    private async Task OnPhone(string phoneNumber)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(phoneNumber))
-            {
-                await js.InvokeVoidAsync("alert", "Keine Telefonnummer für diesen Kunden vorhanden.");
-                return;
-            }
-
-            await js.InvokeVoidAsync("phoneRedirect.openPhoneDialer", phoneNumber);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error redirecting to phone: {ex.Message}");
-        }
-		showContextMenu = false;
-    }
-    private async Task OnWhatsAppMessage(Customers customer)
-    {
-        var result = await whatsAppService.SendMassage(customer);
-        if (!result.Result)
-        {
-            await js.InvokeVoidAsync("alert", result.Message);
-        }
         showContextMenu = false;
     }
     // UnexpectedPayment
