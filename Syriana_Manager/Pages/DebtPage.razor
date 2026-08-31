@@ -146,11 +146,8 @@
 										</button>
 									</div>
 
-									<div class="col-12 col-md-auto d-flex justify-content-center">
-										<button class="btn btn-outline-success px-5 shadow-sm py-2"
-										style="min-width: 200px; width: inherit;"
-										@onclick="OnNotifyCustomer"
-										disabled="@IsProcessing">
+									<div class="col-12 col-md-auto d-flex justify-content-center gap-1">
+										<button class="btn btn-outline-success px-5 shadow-sm py-2" style="min-width: 200px; width: inherit;" @onclick="OnNotifyCustomer" disabled="@IsProcessing">
 											@if (IsProcessing)
 											{
 												<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
@@ -160,6 +157,10 @@
 												<i class="bi bi-whatsapp me-2"></i> <span class="fw-bold">@L["NotifyCustomer"]</span>
 											}
 										</button>
+										<select class="form-select form-select-sm" style="max-width:110px; width:auto;" @bind="selectedNotifyLanguage" @bind:after="OnNotifyLanguagehanged">
+											<option value="ar">Ar-العربية</option>
+											<option value="de">De-الالمانية</option>
+										</select>
 									</div>
 								</div>
 							</div>
@@ -252,6 +253,7 @@
 	[Parameter]
 	public int customerId { get; set; }
 
+	private string selectedNotifyLanguage = "de";
 	private Customers customer = null!;
 	private DebtCustomers debtCustomers = null!;
 	private TransactionsCustomers transactionsCustomers = new TransactionsCustomers();
@@ -262,11 +264,13 @@
 	{
 		var authState = await authProvider.GetAuthenticationStateAsync();
 		var user = authState.User;
-		IsHasManageDebtPermission = user.HasClaim("permission", "manageDebt") ||
-							user.HasClaim("permission", "fullAccess");
+		IsHasManageDebtPermission = user.HasClaim("permission", "manageDebt") || user.HasClaim("permission", "fullAccess");
 
 		IsHasEditCustomersPermission = user.HasClaim("permission", "editCustomers") || user.HasClaim("permission", "fullAccess");
 		IsHasCrateCustomerOneTimePaymentPermission = user.HasClaim("permission", "crateCustomerOneTimePayment") || user.HasClaim("permission", "fullAccess");
+		
+		// get selectedNotifyLanguage from local storage, if not found, set to "ar"
+		selectedNotifyLanguage = await localStorageService.Get<string>("selectedNotifyLanguage") ?? "de";
 
 		// afterRender  true, weil wir nutzen die funktion hier nicht
 		IsRendered.AfterRender = true;
@@ -276,6 +280,7 @@
 	{
 		if (IsHasManageDebtPermission)
 		{
+			// get current customer 
 			customer = customersService.GetCustomerByIdLocal(customerId) ?? await customersService.GetCustomerByIdAsync(customerId);
 
 			debtCustomers = await debtService.GetDebtCustomerByIdAsync(customerId);
@@ -294,6 +299,8 @@
 			}
 			// get first transactions
 			await OnMoreLoadTransactionsCustomers();
+			// Alle Kunden für die Pfeile „Weiter“ und „Zurück“ abrufen
+			await customersService.GetAllCustomersByLineId(customer.DistributionLineId);
 			// Prüfen Sie, ob die Pfeile für das nächste und vorherige Chevron deaktiviert werden sollen.
 			int currentIndex = customersService.GetOrderByStopNumberAndCurrenIndex(customer.DistributionLineId, customerId);
 			IsDisabled.nextChevron = currentIndex == -1 || currentIndex >= customersService.sortedCustomersByStopNummer.customers.Count - 1;
@@ -371,7 +378,7 @@
 			.LastOrDefault(t => t.CustomerId == customerId);
 
 		string token = transactionsCustomersService.GetCustomerNotificationToken(customerId);
-		await whatsAppService.SendTransactionCustomerNotify(customer, debtCustomers, lastTransaction!, token);
+		await whatsAppService.SendTransactionCustomerNotify(customer, debtCustomers, lastTransaction!, token, selectedNotifyLanguage);
 	}
 	// select all content in input when focus
 	private async Task SelectAllContent()
@@ -469,5 +476,10 @@
 			this.EditingCustomer = args.customerProcess.EditingCustomer;
 			this.IsEditing = args.IsEditing!;
 		}
+	}
+
+	private async Task OnNotifyLanguagehanged()
+	{
+		await localStorageService.Set("selectedNotifyLanguage", selectedNotifyLanguage);
 	}
 }

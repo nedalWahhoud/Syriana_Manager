@@ -135,7 +135,7 @@ namespace Syriana_Manager.Components.Share
 
             return message;
         }
-        public async Task<ValidationResult> SendTransactionCustomerNotify(Customers customer, DebtCustomers debtCustomers, TransactionsCustomers transactionsCustomers, string token)
+        public async Task<ValidationResult> SendTransactionCustomerNotify(Customers customer, DebtCustomers debtCustomers, TransactionsCustomers transactionsCustomers, string token, string language)
         {
             try
             {
@@ -146,22 +146,38 @@ namespace Syriana_Manager.Components.Share
                 string transactionType = transactionsCustomers?.Type == TransactionType.Repay ? "zurückgezahlt" : "ausgeliehen";
                 string lastTransactionInfo = string.Empty;
                 if (transactionsCustomers != null)
-                    lastTransactionInfo = $"💵 Letzter Transaktionsbetrag: {transactionsCustomers?.Amount ?? 0} €  {transactionType} \n";
+                    lastTransactionInfo = $"💵 {(language == "de" ? "Letzter Transaktionsbetrag" : "مبلغ آخر معاملة")}: {transactionsCustomers?.Amount ?? 0} €  {transactionType} \n";
 
                 // url encode the token 
                 string encodedToken = HttpUtility.UrlEncode(token);
                 string baseUrl = $"{AppConfig.Domin}/customerDashboard";
                 string urlWithToken = $"{baseUrl}?token={encodedToken}";
 
-
-                string message =
-                  $"Hallo {customer.Name_de} 👋 \n"
-                + $"🔔 Benachrichtigung über Ihren aktuellen Kontostand.\n"
-                + $"💰 Dein Schuldenstand: {debtCustomers?.Balance ?? 0} €\n"
-                + lastTransactionInfo
-                + "Hier klicken, um die Details zu sehen:\n"
-                + $"{urlWithToken}";
-
+                string message = string.Empty;
+                if (language == "de")
+                {
+                    message =
+                     $"Hallo {customer.Name_de} 👋 \n"
+                   + $"🔔 Benachrichtigung über Ihren aktuellen Kontostand.\n"
+                   + $"💰 Dein Schuldenstand: {debtCustomers?.Balance ?? 0} €\n"
+                   + lastTransactionInfo
+                   + "Hier klicken, um die Details zu sehen:\n"
+                   + $"{urlWithToken}";
+                }
+                else if (language == "ar")
+                {
+                    message =
+                     $"مرحباً {customer.Name_ar} 👋 \n"
+                   + $"🔔 إشعار برصيد حسابك الحالي.\n"
+                   + $"💰 رصيد الدين الحالي: {debtCustomers?.Balance ?? 0} €\n"
+                   + lastTransactionInfo
+                   + "اضغط هنا لرؤية التفاصيل:\n"
+                   + $"{urlWithToken}";
+                }
+                else
+                {
+                    return new ValidationResult { Result = false, Message = "Ungültige Sprache angegeben." };
+                }
                 if (!string.IsNullOrEmpty(customer.PhoneNumber))
                     await _JS.InvokeVoidAsync("whatsappRedirect.openWhatsApp", customer.PhoneNumber, message);
                 else

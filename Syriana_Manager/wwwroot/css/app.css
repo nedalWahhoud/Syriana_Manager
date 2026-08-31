@@ -140,10 +140,6 @@ html, body {
         color: white;
     }
 /* overlay */
-.overlayField {
-    margin-bottom: 12px;
-}
-
 .overlay {
     position: fixed;
     top: 0;
@@ -158,7 +154,6 @@ html, body {
     padding: 1rem;
     box-sizing: border-box;
 }
-
 .standardOverlayForm {
     display: flex;
     flex-direction: column;
@@ -181,6 +176,9 @@ html, body {
         flex-direction: column;
         width: 100%;
     }
+.overlayField {
+    margin-bottom: 12px;
+}
 /* Buchstabe Icon */
 .customLatIcon {
     background-color: #e9ecef;

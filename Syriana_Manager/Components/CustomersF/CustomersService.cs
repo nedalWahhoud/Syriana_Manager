@@ -125,7 +125,6 @@ namespace Syriana_Manager.Components.CustomersF
                 return new ValidationResult { Result = false, Message = ex.Message };
             }
         }
-
         public async Task<Customers> GetCustomerByIdAsync(int id)
         {
             try
@@ -145,7 +144,6 @@ namespace Syriana_Manager.Components.CustomersF
                 return null!;
             }
         }
-
         public static string GetRowClass(Customers customer)
         {
             if (customer.HasOneTimePaymentToday && customer.HasDebt)

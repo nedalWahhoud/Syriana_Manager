@@ -24,14 +24,11 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-
-
 // http api
 builder.Services.AddScoped(sp =>
 {
     return new HttpClient { BaseAddress = AppConfig.ApiUri };
 });
-
 
 // auth
 builder.Services.AddAuthorizationCore();
@@ -91,12 +88,11 @@ builder.Services.AddLocalization(options =>
 var app = builder.Build();
 
 
-
+// set default sprache
 var jsRuntime = app.Services.GetRequiredService<IJSRuntime>();
 var result = await jsRuntime.InvokeAsync<string>("blazorCulture.get");
 
 string cultureName = !string.IsNullOrEmpty(result) ? result : "de"; 
-
 var culture = new CultureInfo(cultureName);
 CultureInfo.DefaultThreadCurrentCulture = culture;
 CultureInfo.DefaultThreadCurrentUICulture = culture;
