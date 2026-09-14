@@ -35,6 +35,15 @@
 					<ValidationMessage For="@(() => carouselImage.EndDate)" />
 				</div>
 				<div class="overlayField">
+					<div class="form-check form-switch mt-2">
+						<InputCheckbox id="IsActive" class="form-check-input" @bind-Value="carouselImage.IsActive" />
+						<label class="form-check-label" for="IsActive">
+							@(carouselImage.IsActive ? L["Active"] : L["Inactive"])
+						</label>
+					</div>
+					<ValidationMessage For="@(() => carouselImage.IsActive)" />
+				</div>
+				<div class="overlayField">
 					<label for="DisplayOrder">@L["Order"]</label>
 					<InputNumber id="DisplayOrder" min="0" class="form-control" @bind-Value="carouselImage.DisplayOrder" @onfocus="@(e => SelectAllContent())" />
 					<ValidationMessage For="@(() => carouselImage.DisplayOrder)" />

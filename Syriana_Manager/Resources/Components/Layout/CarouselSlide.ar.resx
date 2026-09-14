@@ -147,4 +147,13 @@
   <data name="Start" xml:space="preserve">
     <value>البدء</value>
   </data>
+  <data name="Active" xml:space="preserve">
+    <value>نشط</value>
+  </data>
+  <data name="Inactive" xml:space="preserve">
+    <value>معطل</value>
+  </data>
+  <data name="Status" xml:space="preserve">
+    <value>الحالة</value>
+  </data>
 </root>

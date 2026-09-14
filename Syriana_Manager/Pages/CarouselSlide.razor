@@ -2,96 +2,97 @@
 @namespace Syriana_Manager.Components.Layout
 @inject IStringLocalizer<Syriana_Manager.Components.Layout.CarouselSlide> L
 <div class="mainDiv">
-<AuthorizeView>
-	<Authorized Context="authContext">
-		@if (!IsRendered.Initialized || !IsRendered.ParametersSet || !IsRendered.AfterRender)
-		{
-			<Syriana_Manager.Components.Layout.Loading />
-		}
-		else
-		{
-			@if (HasManageCarouselPermission)
+	<AuthorizeView>
+		<Authorized Context="authContext">
+			@if (!IsRendered.Initialized || !IsRendered.ParametersSet || !IsRendered.AfterRender)
 			{
-				<div class="tableContiner">
-					<div class="topTable">
-						<div class="buttonsDiv">
-							<button class="btn addPlusB" @onclick="NewCarouselImage" title="@L["AddNew"]">+</button>
-						</div>
-					</div>
-					@if (carouselImageService.DownloadedCarouselImage == null || carouselImageService.DownloadedCarouselImage.Count == 0)
-					{
-						<div class="d-flex justify-content-center align-items-center"
-						style="min-height: 60vh;">
-							<p class="text-muted fs-5">
-								@L["NoFound"]
-							</p>
-						</div>
-					}
-					else 
-					{
-						<div class="row">
-							@foreach (var carouselImage in carouselImageService.DownloadedCarouselImage)
-							{
-								<div class="col-md-4 mb-4">
-									<div class="card h-100 shadow-sm">
-										@if (!string.IsNullOrEmpty(carouselImage.ImageUrl))
-										{
-											<img src="@carouselImageService.GetImageUrl(carouselImage)" class="card-img-top" style="object-fit: cover; height: 200px;" />
-										}
-
-										<div class="card-body d-flex flex-column">
-											<h5 class="card-title">ID: @carouselImage.Id</h5>
-											<p class="card-text mb-1"><strong>@L["Start"]:</strong> @carouselImage.StartDate.ToShortDateString()</p>
-											<p class="card-text mb-1"><strong>@L["End"]:</strong> @carouselImage.EndDate.ToShortDateString()</p>
-											<p class="card-text mb-2"><strong>@L["Order"]:</strong> @carouselImage.DisplayOrder</p>
-
-											<div class="mt-auto d-flex justify-content-between">
-												<button class="btn btn-sm btn-warning" @onclick="() => EditCarouselImage(carouselImage)" disabled="@IsProcessing.Item1">
-													<i class="bi bi-pencil"></i> @L["Edit"]
-												</button>
-												<button class="btn btn-sm btn-danger" @onclick="() => DeleteCarouselImage(carouselImage.Id)" disabled="@IsProcessing.Item1">
-													@if (IsProcessing.Item1 && IsProcessing.Item2 == carouselImage.Id)
-													{
-														<span class="spinner-border spinner-border-sm"
-														role="status"
-														aria-hidden="true"></span>
-													}
-													else
-													{
-														<span><i class="bi bi-trash"></i> @L["Delete"]</span>
-													}
-												</button>
-											</div>
-										</div>
-									</div>
-								</div>
-							}
-						</div>
-					}
-				</div>
-				@if (IsAdding)
-				{
-					<Syriana_Manager.Components.Layout.OverlayEditAddCarouselImage carouselImage="new CarouselImage()" Action="Add" OnHandel="HandleEditAddCarouselImage" />
-				}
-				else if (IsEditing)
-				{
-					<Syriana_Manager.Components.Layout.OverlayEditAddCarouselImage carouselImage="EditingCarouselImage" Action="Edit" OnHandel="HandleEditAddCarouselImage" />
-				}
+				<Syriana_Manager.Components.Layout.Loading />
 			}
 			else
 			{
-				<div style="display:flex; justify-content:center; align-items:center; height:80vh;">
-					<div class="alert alert-danger text-center">
-						@L["NoPermission"]
+				@if (HasManageCarouselPermission)
+				{
+					<div class="tableContiner">
+						<div class="topTable">
+							<div class="buttonsDiv">
+								<button class="btn addPlusB" @onclick="NewCarouselImage" title="@L["AddNew"]">+</button>
+							</div>
+						</div>
+						@if (carouselImageService.DownloadedCarouselImage == null || carouselImageService.DownloadedCarouselImage.Count == 0)
+						{
+							<div class="d-flex justify-content-center align-items-center"
+							style="min-height: 60vh;">
+								<p class="text-muted fs-5">
+									@L["NoFound"]
+								</p>
+							</div>
+						}
+						else 
+						{
+							<div class="row">
+								@foreach (var carouselImage in carouselImageService.DownloadedCarouselImage)
+								{
+									<div class="col-md-4 mb-4">
+										<div class="card h-100 shadow-sm">
+											@if (!string.IsNullOrEmpty(carouselImage.ImageUrl))
+											{
+												<img src="@carouselImageService.GetImageUrl(carouselImage)" class="card-img-top" style="object-fit: cover; height: 200px;" />
+											}
+
+											<div class="card-body d-flex flex-column">
+												<h5 class="card-title">ID: @carouselImage.Id</h5>
+												<p class="card-text mb-1"><strong>@L["Start"]:</strong> @carouselImage.StartDate.ToShortDateString()</p>
+												<p class="card-text mb-1"><strong>@L["End"]:</strong> @carouselImage.EndDate.ToShortDateString()</p>
+												<p class="card-text mb-1"><strong>@L["Order"]:</strong> @carouselImage.DisplayOrder</p>
+												<p class="card-text mb-1 form-switch">
+													<strong>@L["Status"]:</strong>
+													<InputCheckbox id="IsActive" class="form-check-input" Value="carouselImage.IsActive" ValueChanged="@(_ => OnIsActiveChanged(carouselImage.Id))" ValueExpression="() => carouselImage.IsActive" />
+												</p>
+												<div class="mt-auto d-flex justify-content-between">
+													<button class="btn btn-sm btn-warning" @onclick="() => EditCarouselImage(carouselImage)" disabled="@IsProcessing.Item1">
+														<i class="bi bi-pencil"></i> @L["Edit"]
+													</button>
+													<button class="btn btn-sm btn-danger" @onclick="() => DeleteCarouselImage(carouselImage.Id)" disabled="@IsProcessing.Item1">
+														@if (IsProcessing.Item1 && IsProcessing.Item2 == carouselImage.Id)
+														{
+															<span class="spinner-border spinner-border-sm"role="status"	aria-hidden="true"></span>
+														}
+														else
+														{
+															<span><i class="bi bi-trash"></i> @L["Delete"]</span>
+														}
+													</button>
+												</div>
+											</div>
+										</div>
+									</div>
+								}
+							</div>
+						}
 					</div>
-				</div>
+					@if (IsAdding)
+					{
+						<Syriana_Manager.Components.Layout.OverlayEditAddCarouselImage carouselImage="new CarouselImage()" Action="Add" OnHandel="HandleEditAddCarouselImage" />
+					}
+					else if (IsEditing)
+					{
+						<Syriana_Manager.Components.Layout.OverlayEditAddCarouselImage carouselImage="EditingCarouselImage" Action="Edit" OnHandel="HandleEditAddCarouselImage" />
+					}
+				}
+				else
+				{
+					<div style="display:flex; justify-content:center; align-items:center; height:80vh;">
+						<div class="alert alert-danger text-center">
+							@L["NoPermission"]
+						</div>
+					</div>
+				}
 			}
-		}
-	</Authorized>
-	<NotAuthorized>
-		<Syriana_Manager.Pages.LogIn />
-	</NotAuthorized>
-</AuthorizeView>
+		</Authorized>
+		<NotAuthorized>
+			<Syriana_Manager.Pages.LogIn />
+		</NotAuthorized>
+	</AuthorizeView>
 </div>
 @code {
 
@@ -128,22 +129,23 @@
 				ImageUrlLocal = carouselImage.ImageUrlLocal,
 				StartDate = carouselImage.StartDate,
 				EndDate = carouselImage.EndDate,
+				IsActive = carouselImage.IsActive,
 				DisplayOrder = carouselImage.DisplayOrder,
 				LastModified = carouselImage.LastModified
 			};
 		IsEditing = true;
 	}
 	private async Task DeleteCarouselImage(int id)
-    {
+	{
 		IsProcessing = (true,id);
 		var resultConfirm = await js.InvokeAsync<bool>("confirm", $"Möchten Sie das Carousel-Image mit der ID {id} wirklich löschen?");
 		if (resultConfirm)
 		{
-		    var result = await carouselImageService.DeleteCarouselImageAsync(id);
+			var result = await carouselImageService.DeleteCarouselImageAsync(id);
 			await js.InvokeVoidAsync("alert", result.Message);
 		}
 		IsProcessing = (false,id);
-    }
+	}
 	private void HandleEditAddCarouselImage(string action)
 	{
 		if (action == "Add")
@@ -154,5 +156,15 @@
 		{
 			IsEditing = false;
 		}
+	}
+	private async Task OnIsActiveChanged(int id)
+	{
+		IsProcessing = (true, id);
+		var resutl = await carouselImageService.ToggleIsActive(id);
+		if (!resutl.Result)
+		{
+			await js.InvokeVoidAsync("alert", resutl.Message);
+		}
+		IsProcessing = (false, 0);
 	}
 }

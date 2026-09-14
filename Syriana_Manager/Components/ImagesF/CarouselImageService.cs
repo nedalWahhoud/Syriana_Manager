@@ -218,6 +218,33 @@ namespace Syriana_Manager.Components.ImagesF
                 return new ValidationResult { Result = false, Message = ex.Message };
             }
         }
+        public async Task<ValidationResult> ToggleIsActive(int Id)
+        {
+            try
+            {
+                var response = await _http.PutAsync($"api/Carousel/toggleIsActive/{Id}", null);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadFromJsonAsync<ValidationResult>() ?? new ValidationResult { Result = false, Message = "Unknown error." }; ;
+                }
+                var result = await response.Content.ReadFromJsonAsync<ValidationResult>();
+                if (result == null || !result.Result)
+                {
+                    return new ValidationResult { Result = false, Message = "Unbekannte Fehler." };
+                }
+                // update local list
+                var index = DownloadedCarouselImage.FindIndex(ci => ci.Id == Id);
+                if (index != -1)
+                {
+                    DownloadedCarouselImage[index].IsActive = !DownloadedCarouselImage[index].IsActive;
+                }
+                return result;
+            }
+            catch (Exception ex)
+            {
+                return new ValidationResult { Result = false, Message = ex.Message };
+            }
+        }
         public async Task<ValidationResult> DeleteCarouselImageAsync(int id)
         {
             try
