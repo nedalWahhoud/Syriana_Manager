@@ -283,10 +283,10 @@
 					</div>
 
 					@* menu context *@
-					@if (showContextMenu && selectedProduct != null)
+					@if (contextMenuState.Show && selectedProduct != null)
 					{
 						<div class="contextMenu dropdown-menu-end dropdown-menu"
-						style="position: fixed; top: @(menuY)px; left: @(menuX)px; display: block;"
+						style="position: fixed; top: @(contextMenuState.Y)px; left: @(contextMenuState.X)px; display: block;"
 						@onclick:stopPropagation="true">
 							<ul>
 								<li @onclick="() => EditProduct(selectedProduct)">
@@ -626,69 +626,8 @@
 		await loadInBackground();
 	}
 	// Menu recht klicken
-	private bool showContextMenu = false;
-	private double menuX;
-	private double menuY;
-	private string menuXpx => $"{menuX}px";
-	private string menuYpx => $"{menuY}px";
+	private ContextMenuState contextMenuState = new();
 	private Products? selectedProduct;
-
-	// Select
-	private Products? selectedRow;
-	private void OnDoubleTap(Products product, MouseEventArgs e)
-	{
-		if (_editProduct != null || IsShowAddProductForm || IsDeleting || IsShowInvoice || IsShowOrder)
-			return;
-
-		selectedProduct = product;
-		selectedRow = product;
-
-		menuX = e.ClientX;
-		menuY = e.ClientY;
-		showContextMenu = true;
-
-		StateHasChanged();
-	}
-	private void OnSelectRow(Products product, MouseEventArgs e)
-	{
-		if (_editProduct != null || IsShowAddProductForm || IsDeleting || IsShowInvoice || IsShowOrder)
-			return;
-
-		if (e.Button == 2)
-		{
-			selectedProduct = product;
-			menuX = e.ClientX;
-			menuY = e.ClientY;
-			showContextMenu = true;
-		}
-
-		selectedRow = product;
-	}
-	// Add Product
-	private bool IsShowAddProductForm = false;
-	private async void ShowAddProductFormAsync()
-	{
-		// cancel all other processes
-		_editProduct = null!;
-
-		// get the categories and manufacturers and taxrates
-		if (!taskCatyrories.IsCompleted)
-			await taskCatyrories;
-		if (!taskSuppliers.IsCompleted)
-			await taskSuppliers;
-		if (!taskProductGroups.IsCompleted)
-			await taskProductGroups;
-		if (!taskTaxRates.IsCompleted)
-			await taskTaxRates;
-
-		IsShowAddProductForm = !IsShowAddProductForm;
-		StateHasChanged();
-	}
-	private void HideAddProductForm()
-	{
-		IsShowAddProductForm = false;
-	}
-	// Delete Product
 	private bool IsDeleting = false;
 	private async Task DeleteProduct(Products SelectedProduct)
 	{
@@ -698,7 +637,7 @@
 			return;
 		}
 		// hide die context menu
-		showContextMenu = false;
+		contextMenuState.HideMenu();
 		// set deleting state
 		IsDeleting = true;
 		var resultConfirm = await js.InvokeAsync<bool>("confirm", $"Möchten Sie das Produkt mit der ID {SelectedProduct.Id} wirklich löschen?");
@@ -730,7 +669,6 @@
 		// reset deleting state
 		IsDeleting = false;
 	}
-	// Edit Product
 	private Products _editProduct = null!;
 	private Products newProduct = new Products();
 	private async Task EditProduct(Products SelectedProduct)
@@ -741,7 +679,7 @@
 			return;
 		}
 		// hide die context menu
-		showContextMenu = false;
+		contextMenuState.HideMenu();
 		// erlaubt keine Änderung von Produkten, wenn Kassenbon oder Rechnung angezeigt wird
 		if (!IsShowInvoice && SelectedProduct != null)
 		{
@@ -773,32 +711,100 @@
 					IsShippable = SelectedProduct.IsShippable,
 					//DiscountedPrice = SelectedProduct.DiscountedPrice,
 					ProductDiscount = (selectedProduct?.ProductDiscount == null)
-			                        ? new ()
-			                        : new ()
-		             {
-				          Id = selectedProduct.ProductDiscount.Id,
-				          ProductsId = selectedProduct.ProductDiscount.ProductsId,
-				          DiscountedPrice = selectedProduct.ProductDiscount.DiscountedPrice,
-				          StartDate = selectedProduct.ProductDiscount.StartDate,
-				          EndDate = selectedProduct.ProductDiscount.EndDate
-			         },
+										? new()
+										: new()
+										{
+											Id = selectedProduct.ProductDiscount.Id,
+											ProductsId = selectedProduct.ProductDiscount.ProductsId,
+											DiscountedPrice = selectedProduct.ProductDiscount.DiscountedPrice,
+											StartDate = selectedProduct.ProductDiscount.StartDate,
+											EndDate = selectedProduct.ProductDiscount.EndDate
+										},
 					//Image = SelectedProduct.Image,
 					ProductImages = SelectedProduct.ProductImages?
-		             .Select(img => new ProductImages
-		             {
-	 		           Id = img.Id,
-			           ProductId = img.ProductId,
-			           ImageUrl = img.ImageUrl,
-			           IsMain = img.IsMain,
-			           ImageBytes = img.ImageBytes,
-			           LastModified = img.LastModified
-		             })
-		             .ToList() ?? new List<ProductImages>(),
+						 .Select(img => new ProductImages
+						 {
+							 Id = img.Id,
+							 ProductId = img.ProductId,
+							 ImageUrl = img.ImageUrl,
+							 IsMain = img.IsMain,
+							 ImageBytes = img.ImageBytes,
+							 LastModified = img.LastModified
+						 })
+						 .ToList() ?? new List<ProductImages>(),
 					UserId = user?.Id ?? 0,
 					CartItem = SelectedProduct.CartItem
 				};
 		}
 	}
+	private bool ShowScanner = false;
+	private async Task OpenScanner()
+	{
+		ShowScanner = true;
+		StateHasChanged(); // Wir bitten Blizzard, zuerst das "Reder"-Div zu zeichnen.
+
+		await Task.Delay(100); // Eine kurze Verzögerung, um sicherzustellen, dass der Browser das Element gezeichnet hat.
+		try
+		{
+			// JavaScript aufrufen und Kamera starten
+			await js.InvokeVoidAsync("startLiveScanner", DotNetObjectReference.Create(this));
+		}
+		catch(Exception ex)
+		{
+			await js.InvokeVoidAsync("alert", ex.Message);
+		}
+	}
+	// Select
+	private Products? selectedRow;
+	private void OnDoubleTap(Products product, MouseEventArgs e)
+	{
+		if (_editProduct != null || IsShowAddProductForm || IsDeleting || IsShowInvoice || IsShowOrder)
+			return;
+
+		selectedProduct = product;
+		selectedRow = product;
+
+		contextMenuState.ShowMenu(e.ClientX, e.ClientY);
+		StateHasChanged();
+	}
+	private void OnSelectRow(Products product, MouseEventArgs e)
+	{
+		if (_editProduct != null || IsShowAddProductForm || IsDeleting || IsShowInvoice || IsShowOrder)
+			return;
+
+		if (e.Button == 2)
+		{
+			selectedProduct = product;
+			contextMenuState.ShowMenu(e.ClientX, e.ClientY);
+		}
+
+		selectedRow = product;
+	}
+	// Add Product
+	private bool IsShowAddProductForm = false;
+	private async void ShowAddProductFormAsync()
+	{
+		// cancel all other processes
+		_editProduct = null!;
+
+		// get the categories and manufacturers and taxrates
+		if (!taskCatyrories.IsCompleted)
+			await taskCatyrories;
+		if (!taskSuppliers.IsCompleted)
+			await taskSuppliers;
+		if (!taskProductGroups.IsCompleted)
+			await taskProductGroups;
+		if (!taskTaxRates.IsCompleted)
+			await taskTaxRates;
+
+		IsShowAddProductForm = !IsShowAddProductForm;
+		StateHasChanged();
+	}
+	private void HideAddProductForm()
+	{
+		IsShowAddProductForm = false;
+	}
+
 	// Overlay Form Handel
 	private void HandleEditProduct((Products product, string Action) data)
 	{
@@ -1122,33 +1128,16 @@
 		invoice = null!;
 		if (action == "close")
 		{
-			
+
 		}
 		else if(action == "save")
 		{
 			IsInvoiceVisible = false;
-		    IsShowInvoice = false;
+			IsShowInvoice = false;
 			cartService.ClearCart();
 		}
 	}
-	// barcode scanning
-	private bool ShowScanner = false;
-	private async Task OpenScanner()
-	{
-		ShowScanner = true;
-		StateHasChanged(); // Wir bitten Blizzard, zuerst das "Reder"-Div zu zeichnen.
 
-		await Task.Delay(100); // Eine kurze Verzögerung, um sicherzustellen, dass der Browser das Element gezeichnet hat.
-		try
-		{
-			// JavaScript aufrufen und Kamera starten
-			await js.InvokeVoidAsync("startLiveScanner", DotNetObjectReference.Create(this));
-		}
-		catch(Exception ex)
-		{
-			await js.InvokeVoidAsync("alert", ex.Message);
-		}
-	}
 	[JSInvokable]
 	public async Task OnBarcodeScanned(string code)
 	{
@@ -1161,7 +1150,7 @@
 			{
 				selectedProduct.Barcode = code;
 				ShowScanner = false;
-				showContextMenu = false;
+				contextMenuState.HideMenu();
 				StateHasChanged();
 				return;
 			}
@@ -1186,7 +1175,7 @@
 			await js.InvokeVoidAsync("alert", ex.Message);
 		}
 		ShowScanner = false;
-		showContextMenu = false;
+		contextMenuState.HideMenu();
 	}
 	public void Dispose()
 	{
@@ -1195,7 +1184,7 @@
 	private void OnMainDiv()
 	{
 		// hide die Menu if sichtbar
-		showContextMenu = false;
+		contextMenuState.HideMenu();
 	}
 }
 

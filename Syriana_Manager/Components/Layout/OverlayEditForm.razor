@@ -15,7 +15,7 @@
 			</div>
 			<div class="overlayField">
 				<div class="input-group">
-					<InputText id="productDescriptionDe" class="form-control" @bind-Value="GetProducts.Description_de" placeholder="Description de" />
+					<InputTextArea id="productDescriptionDe" class="form-control" @bind-Value="GetProducts.Description_de" placeholder="Description de" rows="2" />
 					<button class="btn btn-outline-danger" type="button" @onclick='() => ClearInput(val => GetProducts.Description_de = val,"productDescriptionDe")'>
 						<i class="fas fa-times"></i>
 					</button>
@@ -33,7 +33,7 @@
 			</div>
 			<div class="overlayField">
 				<div class="input-group">
-					<InputText id="productDescriptionAr" class="form-control" @bind-Value="GetProducts.Description_ar" placeholder="وصف المنتج بل عربية" />
+					<InputTextArea id="productDescriptionAr" class="form-control" @bind-Value="GetProducts.Description_ar" placeholder="وصف المنتج بل عربية" rows="2" />
 					<button class="btn btn-outline-danger" type="button" @onclick='() => ClearInput(val => GetProducts.Description_ar = val,"productDescriptionAr")'>
 						<i class="fas fa-times"></i>
 					</button>

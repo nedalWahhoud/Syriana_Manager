@@ -188,7 +188,6 @@
     }
     private async Task CloseMenu()
     {
-        await js.InvokeVoidAsync("eval",
-            "document.querySelector('.navbar-toggler')?.click()");
+        await js.InvokeVoidAsync("eval","document.querySelector('.navbar-toggler')?.click()");
     }
 }

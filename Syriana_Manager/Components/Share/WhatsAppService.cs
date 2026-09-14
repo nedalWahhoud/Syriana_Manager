@@ -8,10 +8,11 @@ using System.Text;
 using System.Web;
 namespace Syriana_Manager.Components.Share
 {
-    public class WhatsAppService(IJSRuntime JS, ProductService productService)
+    public class WhatsAppService(IJSRuntime JS, ProductService productService, IStringLocalizer<Layout.DebtPage> L)
     {
         private readonly IJSRuntime _JS = JS;
         private readonly ProductService _productService = productService;
+        private readonly IStringLocalizer<Layout.DebtPage> _L = L;
 
         public async Task<ValidationResult> SendCustomerInfo(Customers customer)
         {
@@ -143,7 +144,7 @@ namespace Syriana_Manager.Components.Share
                     return new ValidationResult { Result = false, Message = "Token ist erforderlich." };
 
                 // last transaction konfigurieren
-                string transactionType = transactionsCustomers?.Type == TransactionType.Repay ? "zurückgezahlt" : "ausgeliehen";
+                string transactionType = transactionsCustomers?.Type == TransactionType.Repay ? (language == "de" ? "zurückgezahlt" : "تم سداد") : (language == "de" ? "ausgeliehen" : "استلاف");
                 string lastTransactionInfo = string.Empty;
                 if (transactionsCustomers != null)
                     lastTransactionInfo = $"💵 {(language == "de" ? "Letzter Transaktionsbetrag" : "مبلغ آخر معاملة")}: {transactionsCustomers?.Amount ?? 0} €  {transactionType} \n";

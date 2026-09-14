@@ -87,10 +87,10 @@
 									var dataSource = suppliersService.DownloadedSuppliers;
 									<Virtualize Items="dataSource" Context="supplier" OverscanCount="10">
 										<tr @key="supplier.Id" @oncontextmenu:preventDefault="true"
-											@oncontextmenu="@(e => OnSelectRow(supplier, e))"
-											@onclick="(e) => OnSelectRow(supplier, e)"
-											@ondblclick="(e) => OnDoubleTap(supplier, e)"
-											class="@(selectedSupplier?.Id == supplier.Id ? "selected" : "")">
+										@oncontextmenu="@(e => OnSelectRow(supplier, e))"
+										@onclick="(e) => OnSelectRow(supplier, e)"
+										@ondblclick="(e) => OnDoubleTap(supplier, e)"
+										class="@(selectedSupplier?.Id == supplier.Id ? "selected" : "")">
 											@if (ShowColumn("Id"))
 											{
 												<td>@supplier.Id</td>
@@ -146,11 +146,11 @@
 						</table>
 					</div>
 					@* menu context *@
-					@if (showContextMenu && selectedSupplier != null)
+					@if (contextMenuState.Show && selectedSupplier != null)
 					{
 						<div class="contextMenu dropdown-menu-end dropdown-menu"
-							 style="position: fixed; top: @(menuY)px; left: @(menuX)px; display: block;"
-							 @onclick:stopPropagation="true">
+						style="position: fixed; top: @(contextMenuState.Y)px; left: @(contextMenuState.X)px; display: block;"
+						@onclick:stopPropagation="true">
 							<ul>
 								<li @onclick="() => PlaceOrder(selectedSupplier)">
 									<a><i class="fa-solid fa-cart-plus"></i> @L["PlaceOrder"]</a>
@@ -266,19 +266,13 @@
 	}
 	private Suppliers? selectedSupplier;
 	// Menu recht klicken
-	private bool showContextMenu = false;
-	private double menuX;
-	private double menuY;
-	private string menuXpx => $"{menuX}px";
-	private string menuYpx => $"{menuY}px";
+	ContextMenuState contextMenuState = new ();
 	private void OnDoubleTap(Suppliers supplier, MouseEventArgs e)
 	{
 		//selectedProduct = supplier;
 		selectedSupplier = supplier;
 
-		menuX = e.ClientX;
-		menuY = e.ClientY;
-		showContextMenu = true;
+		contextMenuState.ShowMenu(e.ClientX, e.ClientY);
 
 		StateHasChanged();
 	}
@@ -287,9 +281,7 @@
 		if (e.Button == 2)
 		{
 			//selectedProduct = supplier;
-			menuX = e.ClientX;
-			menuY = e.ClientY;
-			showContextMenu = true;
+			contextMenuState.ShowMenu(e.ClientX, e.ClientY);	
 		}
 
 		selectedSupplier = supplier;
@@ -297,11 +289,12 @@
 
 	private void Edit(Suppliers supplier)
 	{
-		showContextMenu = false;
+		contextMenuState.HideMenu();
 		EditingSupplier = new Suppliers()
 			{
 				Id = supplier.Id,
 				Name = supplier.Name,
+				Name_Ar = supplier.Name_Ar,
 				Street = supplier.Street,
 				HNumber = supplier.HNumber,
 				PostalCode = supplier.PostalCode,
@@ -315,7 +308,7 @@
 	}
 	private async Task Delete(Suppliers supplier)
 	{
-		showContextMenu = false;
+		contextMenuState.HideMenu();
 		if (supplier == null || supplier.Id <= 0)
 		{
 			await js.InvokeVoidAsync("alert", "Ungültiger Lieferant.");
@@ -349,6 +342,6 @@
 	private void OnMainDiv()
 	{
 		// hide die Menu if sichtbar
-		showContextMenu = false;
+		contextMenuState.HideMenu();
 	}
 }

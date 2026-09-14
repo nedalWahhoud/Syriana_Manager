@@ -126,10 +126,10 @@
                         }
                     </div>
                     @* menu context *@
-                    @if (showContextMenu && (selectedRowDiscountCodes != null || selectedRowDiscountCategory != null))
+                    @if (contextMenuState.Show && (selectedRowDiscountCodes != null || selectedRowDiscountCategory != null))
                     {
                         <div class="contextMenu dropdown-menu-end dropdown-menu"
-                        style="position: fixed; top: @(menuY!)px; left: @(menuX!)px; display: block;"
+                        style="position: fixed; top: @(contextMenuState.Y!)px; left: @(contextMenuState.X!)px; display: block;"
                         @onclick:stopPropagation="true">
                             <ul>
                                 <li @onclick="() => Edit(selectedRowDiscountCodes!,selectedRowDiscountCategory!)">
@@ -250,7 +250,7 @@
             OpenAddForm(false, false);
         }
 
-        showContextMenu = false;
+        contextMenuState.HideMenu();
     }
     private async Task Delete(DiscountCodes discountCodes, DiscountCategory discountCategory)
     {
@@ -276,7 +276,7 @@
 
             }
         }
-        showContextMenu = false;
+        contextMenuState.HideMenu();
     }
     // select DiscountCategory
     private DiscountCategory? selectedRowDiscountCategory;
@@ -290,10 +290,7 @@
         selectedRowDiscountCodes = item;
         selectedRowDiscountCategory = item1;
 
-        menuX = e.ClientX;
-        menuY = e.ClientY;
-        showContextMenu = true;
-
+        contextMenuState.ShowMenu(e.ClientX, e.ClientY);
         StateHasChanged();
     }
     private void OnSelectRow(DiscountCodes item,DiscountCategory item1, MouseEventArgs e)
@@ -305,20 +302,12 @@
         {
             selectedRowDiscountCodes = item;
             selectedRowDiscountCategory = item1;
-            menuX = e.ClientX;
-            menuY = e.ClientY;
-            showContextMenu = true;
+            contextMenuState.ShowMenu(e.ClientX, e.ClientY);
         }
-
-
     }
 
     // Menu recht klicken
-    private bool showContextMenu = false;
-    private double menuX;
-    private double menuY;
-    private string menuXpx => $"{menuX}px";
-    private string menuYpx => $"{menuY}px";
+    private ContextMenuState contextMenuState = new ();
     //
     private DiscountCodes newDiscountCode = new();
     private DiscountCategory newDiscountCategory = new();
@@ -329,8 +318,8 @@
         showDiscountFormAction = null;
     }
     private void OnMainDiv()
-	{
-		// hide die Menu if sichtbar
-		showContextMenu = false;
-	}
+    {
+        // hide die Menu if sichtbar
+        contextMenuState.HideMenu();
+    }
 }

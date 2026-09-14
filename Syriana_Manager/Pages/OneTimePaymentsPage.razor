@@ -13,11 +13,11 @@
                 @if (IsHasViewPageAndManageStatusCustomerOneTimePaymentPermoission)
                 {
                     @* menu context *@
-                    @if (showContextMenu && selectedPayment != null)
+                    @if (contextMenuState.Show && selectedPayment != null)
                     {
                         bool isNotOpen = selectedPayment.Status != OneTimePaymentStatus.Offen;
                         <div class="contextMenu dropdown-menu-end dropdown-menu"
-                        style="position: fixed; top: @(menuY)px; left: @(menuX)px; display: block;"
+                        style="position: fixed; top: @(contextMenuState.Y)px; left: @(contextMenuState.X)px; display: block;"
                         @onclick:stopPropagation="true">
                             <ul>
                                 <li>
@@ -192,7 +192,7 @@
                                                                                         .Where(p => p.Status != OneTimePaymentStatus.Ausgezahlt)
                                                                                         .Sum(p => p.TotalAmount);
                                                                                     }
-                                                                                        @totalAmount.ToString("N2") €
+                                                                                    @totalAmount.ToString("N2") €
                                                                                 </td>
                                                                                 <td class="text-center text-success fw-bold">@(SelectedDate.Payments.Sum(p => p.AmountCollected).ToString("N2")) €</td>
                                                                                 <td></td>
@@ -441,7 +441,7 @@
             var cachedData = oneTimePaymentsService.DownloadedGroups.FirstOrDefault(lineList => lineList.Group.Any(group => group.Payments.Any(p => p.DistributionLineId == lineId))).Group ?? new();
             oneTimePaymentsGroup = cachedData.ToList();
             SelectedDate = cachedData.Find(g => g.GroupPickupDate.Date == args.oneTimePayment?.PickupDate.Date) ?? null!;
-			selectedPayment = args.oneTimePayment;
+            selectedPayment = args.oneTimePayment;
         }
         this.IsOneTimePaymentProcessing = (false, null!);
         this.editOneTimePayment = null!;
@@ -500,25 +500,17 @@
     }
 
     // Menu recht klicken
-    private bool showContextMenu = false;
-    private double menuX;
-    private double menuY;
-    private string menuXpx => $"{menuX}px";
-    private string menuYpx => $"{menuY}px";
     private OneTimePayment? selectedPayment;
+    ContextMenuState contextMenuState = new ();
     private void OnSelectRow(OneTimePayment payment, MouseEventArgs e)
     {
         selectedPayment = payment;
-        menuX = e.ClientX;
-        menuY = e.ClientY;
-        showContextMenu = true;
+        contextMenuState.ShowMenu(e.ClientX, e.ClientY);
     }
     private void OnDoubleTap(OneTimePayment payment, MouseEventArgs e)
     {
         selectedPayment = payment;
-        menuX = e.ClientX;
-        menuY = e.ClientY;
-        showContextMenu = true;
+        contextMenuState.ShowMenu(e.ClientX, e.ClientY);
     }
     private async Task Delete(OneTimePayment payment)
     {
@@ -543,7 +535,7 @@
         }
 
         selectedPayment = null!;
-        showContextMenu = false;
+        contextMenuState.HideMenu();
     }
     private void UpdateSelectedDate(OneTimePayment newPayment)
     {
@@ -581,7 +573,7 @@
                 DistributionLine = distributionLine
             };
         IsOneTimePaymentProcessing = (true, "editAll");
-        showContextMenu = false;
+        contextMenuState.HideMenu();
     }
     private async Task OnNotifyCustomer(OneTimePayment payment)
     {
@@ -595,13 +587,13 @@
             await js.InvokeVoidAsync("alert", result.Message);
         }
 
-        showContextMenu = false;
+        contextMenuState.HideMenu();
     }
     // UnexpectedPayment
     private void newUnexpectedPayment()
     {
-		selectedPayment = null!;
-		editOneTimePayment = null!;
+        selectedPayment = null!;
+        editOneTimePayment = null!;
         IsOneTimePaymentProcessing = (true, "UnexpectedPayment");
     }
     private async Task SelectAllContent()
@@ -620,6 +612,6 @@
     private void OnMainDiv()
     {
         // hide die Menu if sichtbar
-        showContextMenu = false;
+        contextMenuState.HideMenu();
     }
 }

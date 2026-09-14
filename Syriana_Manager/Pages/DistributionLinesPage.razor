@@ -21,7 +21,7 @@
 						@if (distributionLinesService.DownloadedDistributionLines == null || !distributionLinesService.DownloadedDistributionLines.Any())
 						{
 							<div class="d-flex justify-content-center align-items-center"
-								 style="min-height: 60vh;">
+							style="min-height: 60vh;">
 								<p class="text-muted fs-5">
 									@L["NoDistribution"]
 								</p>
@@ -39,27 +39,27 @@
 									@foreach (var distributionLine in distributionLinesService.DownloadedDistributionLines)
 									{
 										<tr @oncontextmenu:preventDefault="true"
-											@oncontextmenu="@(e => OnSelectRow(distributionLine, e))"
-											@onpointerdown="(e) => OnTouchStart(distributionLine, e)"
-											@onpointermove="OnTouchMove"
-											@onpointerup="OnTouchEnd"
-											@onclick="(e)=> OnSelectRow(distributionLine,e)"
-											class="@(selectedDistributionLine != null && selectedDistributionLine.Id == distributionLine.Id ? "selected" : "")">
+										@oncontextmenu="@(e => OnSelectRow(distributionLine, e))"
+										@onpointerdown="(e) => OnTouchStart(distributionLine, e)"
+										@onpointermove="OnTouchMove"
+										@onpointerup="OnTouchEnd"
+										@onclick="(e)=> OnSelectRow(distributionLine,e)"
+										class="@(selectedDistributionLine != null && selectedDistributionLine.Id == distributionLine.Id ? "selected" : "")">
 											<td>@distributionLine.Id</td>
 											<td>@distributionLine.LineName</td>
 											<td>@distributionLine.Description</td>
 											<td>
 												<button class="btn btn-sm btn-warning me-1"
-														@onclick="() => EditDistributionLine(distributionLine)" disabled="@IsDeletingProcessing.Item1">
+												@onclick="() => EditDistributionLine(distributionLine)" disabled="@IsDeletingProcessing.Item1">
 													@L["Edit"]
 												</button>
 												<button class="btn btn-sm btn-danger"
-														@onclick="() => DeleteDistributionLine(distributionLine)" disabled="@IsDeletingProcessing.Item1">
+												@onclick="() => DeleteDistributionLine(distributionLine)" disabled="@IsDeletingProcessing.Item1">
 													@if (IsDeletingProcessing.Item1 && IsDeletingProcessing.Item2 == distributionLine.Id)
 													{
 														<span class="spinner-border spinner-border-sm"
-															  role="status"
-															  aria-hidden="true"></span>
+														role="status"
+														aria-hidden="true"></span>
 													}
 													else
 													{
@@ -69,11 +69,11 @@
 											</td>
 										</tr>
 									}
-									@if (showContextMenu && selectedDistributionLine != null && IsDeletingProcessing.Item1 == false)
+									@if (contextMenuState.Show && selectedDistributionLine != null && IsDeletingProcessing.Item1 == false)
 									{
 										<div class="contextMenu"
-											 style="position: fixed; top:@(menuYpx); left:@(menuXpx);"
-											 @onclick:stopPropagation="true">
+										style="position: fixed; top:@(contextMenuState.Y); left:@(contextMenuState.X);"
+										@onclick:stopPropagation="true">
 											<ul>
 												<li @onclick="() => viaWhatasappShre(selectedDistributionLine)"><i class="bi bi-whatsapp me-1"></i> @L["ShareWhatsApp"]</li>
 											</ul>
@@ -179,11 +179,7 @@
 	}
 
 	// Menu recht klicken
-	private bool showContextMenu = false;
-	private double menuX;
-	private double menuY;
-	private string menuXpx => $"{menuX}px";
-	private string menuYpx => $"{menuY}px";
+	ContextMenuState contextMenuState = new ();
 	private System.Timers.Timer? longPressTimer;
 	private double startX, startY;
 	private bool isDragging = false;
@@ -194,9 +190,7 @@
 		if (e.Button == 2) // right click
 		{
 			selectedDistributionLine = distributionLine;
-			menuX = e.ClientX;
-			menuY = e.ClientY;
-			showContextMenu = true;
+			contextMenuState.ShowMenu(e.ClientX, e.ClientY);
 		}
 		selectedDistributionLine = distributionLine;
 	}
@@ -215,9 +209,7 @@
 				InvokeAsync(() =>
 				{
 					selectedDistributionLine = distributionLine;
-					menuX = e.ClientX;
-					menuY = e.ClientY;
-					showContextMenu = true;
+					contextMenuState.ShowMenu(e.ClientX, e.ClientY);
 					StateHasChanged();
 				});
 			}
@@ -252,7 +244,7 @@
 		if (customers == null || !customers.Any())
 		{
 			await js.InvokeVoidAsync("alert", "Keine Kunden in dieser Verteilungslinie gefunden.");
-			showContextMenu = false;
+			contextMenuState.HideMenu();
 			return;
 		}
 
@@ -261,10 +253,10 @@
 		{
 			await js.InvokeVoidAsync("alert", result.Message);
 		}
-		showContextMenu = false;
+		contextMenuState.HideMenu();
 	}
 	private void OnMainDiv()
 	{
-		showContextMenu = false;
+		contextMenuState.HideMenu();
 	}
 }
