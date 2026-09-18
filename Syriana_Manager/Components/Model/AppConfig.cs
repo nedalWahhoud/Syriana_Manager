@@ -19,7 +19,7 @@
         public const string ProductImagesproxy  = "ProductImages";
         public const string CarouselImagesproxy  = "CarouselImages";
         public const string WebRequestProductImagePath  = "api/ShareStorage";
-        public const string GoogleApiUrl = "/users/google-login";
+        public const string GoogleApiUrl  = "https://syriana-supermarkt.de/users/google-login";
 #endif
 
 

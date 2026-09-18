@@ -16,6 +16,8 @@ namespace Syriana_Manager.Components.Model
         public string SignupProvider { get; set; } = string.Empty;
         [JsonIgnore]
         public bool RememberMe { get; set; } = false;
+        [JsonIgnore]
+        public char loginSource = 'm';
         public string Token { get; set; } = string.Empty;
     }
 }

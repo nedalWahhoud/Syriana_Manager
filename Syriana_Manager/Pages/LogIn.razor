@@ -32,7 +32,7 @@
                 </button>
             </div>
         </EditForm>
-        @* <button type="submit" @onclick="GoogleSingup" class="googleBtn" disabled="@(isGoogleLoading || isSingInLoading)">
+        <button type="submit" @onclick="GoogleSingup" class="googleBtn" disabled="@(isGoogleLoading || IsProcessing)">
             @if (isGoogleLoading)
             {
                 <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
@@ -41,10 +41,9 @@
             {
                 <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google Logo" />
             }
-        </button>*@
+        </button>
     </div>
 </div>
-
 
 @code {
 
@@ -82,15 +81,14 @@
     }
     // google
     private bool IsProcessing = false;
-   /* private bool isGoogleLoading = false;
+    private bool isGoogleLoading = false;
     private void GoogleSingup()
     {
         isGoogleLoading = true;
-        string currenApiUrl = appConfig.Value.ApiBaseUrl;
 
-        NavigationManager.NavigateTo($"{appConfig.Value.GoogleApiUrl}?rememberMe={loginModel.RememberMe}", true);
+        navigationManager.NavigateTo($"{AppConfig.GoogleApiUrl}?rememberMe={loginModel.RememberMe}&loginSource={loginModel.loginSource}", true);
 
         isGoogleLoading = false;
-    }*/
+    }
 
 }

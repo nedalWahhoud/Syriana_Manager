@@ -7,6 +7,11 @@
             <div class="sidebar">
                 <NavMenu />
             </div>
+        </Authorized>
+        <NotAuthorized>
+
+        </NotAuthorized>
+    </AuthorizeView>
             <main>
                 <article>
                     <ErrorBoundary @ref="errorBoundary">
@@ -28,11 +33,7 @@
                     </ErrorBoundary>
                 </article>
             </main>
-        </Authorized>
-        <NotAuthorized>
-            <Syriana_Manager.Pages.LogIn />
-        </NotAuthorized>
-    </AuthorizeView>
+       
 </div>
 
 @code {
